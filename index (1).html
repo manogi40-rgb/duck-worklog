@@ -1,0 +1,2168 @@
+<!doctype html>
+<html lang="ko"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0e6b58">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="작업일지">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>오리농장 작업일지</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* 레이아웃: 한 손으로 쓰는 세로 화면. 위에 입식 제목, 가운데 동별 카드, 아래 고정 탭(입력·기록·평균) */
+:root{
+  --bg:#eef3f0; --surface:#ffffff; --surface2:#e3ece7; --ink:#14221d; --muted:#586b63; --line:#cbd8d1;
+  --accent:#0e6b58; --accent-ink:#ffffff; --warn:#a9650c; --bad:#b4372e; --good:#1f7a3f;
+  --font-body:"Noto Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --font-display:"Do Hyeon","Noto Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0e1614; --surface:#16211e; --surface2:#1f2e2a; --ink:#e4efea; --muted:#93a8a0; --line:#2b3d37;
+    --accent:#52c7a8; --accent-ink:#06231b; --warn:#e0a24a; --bad:#f0857c; --good:#6fd08e; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0e1614; --surface:#16211e; --surface2:#1f2e2a; --ink:#e4efea; --muted:#93a8a0; --line:#2b3d37;
+  --accent:#52c7a8; --accent-ink:#06231b; --warn:#e0a24a; --bad:#f0857c; --good:#6fd08e; color-scheme:dark;
+}
+/* 그래프 색: 범주형 1~5번 순서(검증된 팔레트), 외부 센서는 중립색 점선 */
+:root{--s1:#2a78d6;--s2:#eb6834;--s3:#1baf7a;--s4:#eda100;--s5:#e87ba4;--grid:#e1e0d9;--axis:#c3c2b7}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--grid:#2c2c2a;--axis:#383835}}
+:root[data-theme="dark"]{--s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--grid:#2c2c2a;--axis:#383835}
+*{box-sizing:border-box}
+body{
+  background:var(--bg); color:var(--ink); font:15px/1.5 var(--font-body);
+  padding-block:0 92px;
+  padding-left:max(16px,env(safe-area-inset-left,0px));
+  padding-right:max(16px,env(safe-area-inset-right,0px));
+}
+.app{max-width:980px;margin:0 auto}
+button,input,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+
+.top{display:flex;flex-direction:column;gap:10px;padding-top:14px;padding-bottom:12px}
+.titlebar{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.cyc{display:flex;align-items:baseline;gap:10px;min-width:0;background:none;border:0;padding:6px 0;text-align:left;cursor:pointer}
+.cyc-title{font-family:var(--font-display);font-size:clamp(20px,6vw,27px);line-height:1.15;white-space:nowrap}
+.cyc-age{font-size:14px;font-weight:700;color:var(--accent-ink);background:var(--accent);border-radius:999px;padding:1px 11px;white-space:nowrap}
+.caret{color:var(--muted)}
+.notice{margin:0;padding:10px 12px;border-radius:10px;background:var(--surface2);border:1px solid var(--line);color:var(--ink)}
+.notice.bad{border-color:var(--bad)}
+
+.btn{min-height:44px;padding:0 16px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-weight:700;cursor:pointer;white-space:nowrap}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.danger{color:var(--bad);border-color:var(--bad)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+
+.pane{display:flex;flex-direction:column;gap:14px}
+.pane[hidden]{display:none}
+.state{padding:28px 18px;border:1px dashed var(--line);border-radius:12px;text-align:center;color:var(--muted);display:flex;flex-direction:column;gap:12px;align-items:center}
+.state h2{margin:0;color:var(--ink);font-family:var(--font-display);font-weight:400;font-size:22px}
+.state p{margin:0;max-width:34ch}
+
+.datebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.datebar input[type=date]{flex:1 1 150px;min-width:0;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 12px;font-size:17px}
+.datebar .btn{padding:0 14px}
+.sumline{display:flex;gap:6px 18px;flex-wrap:wrap;color:var(--muted)}
+.sumline b{color:var(--ink);font-variant-numeric:tabular-nums}
+
+.houses{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr));gap:14px}
+.house{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.house-head{display:flex;justify-content:space-between;align-items:flex-end;gap:8px}
+.house-head h3{margin:0;font-family:var(--font-display);font-weight:400;font-size:25px;line-height:1}
+.house-now{text-align:right;color:var(--muted);font-size:13px;line-height:1.3}
+.house-now b{display:block;font-family:var(--font-display);font-weight:400;font-size:25px;color:var(--ink);font-variant-numeric:tabular-nums}
+.row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.row-label{display:flex;flex-direction:column;min-width:0}
+.row-label span{font-weight:700}
+.row-label small{color:var(--muted);font-variant-numeric:tabular-nums}
+.qty{display:flex;gap:6px;flex:0 0 auto}
+.qin,.tin,.hin,.kin,.memo,.wfield input,.nfield input{border:1px solid var(--line);border-radius:10px;background:var(--bg);font-size:18px;padding:0 12px}
+.qin{width:112px;height:46px;text-align:right;font-variant-numeric:tabular-nums}
+.sign{width:46px;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:22px;font-weight:700;cursor:pointer;line-height:1}
+.sign.neg{background:var(--bad);border-color:var(--bad);color:var(--accent-ink)}
+.temps{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.temps label{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--muted)}
+.tin,.hin{width:100%;height:46px;text-align:right;font-variant-numeric:tabular-nums}
+.hums{margin-top:8px}
+.works{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:10px 0 4px}
+.ck{display:flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
+.ck input{width:24px;height:24px;margin:0}
+.hkl{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
+.kin{width:96px;height:44px;text-align:right;font-variant-numeric:tabular-nums}
+.kin:disabled{opacity:.45}
+.memo{width:100%;min-height:68px;padding:10px 12px;resize:vertical;font-size:16px;line-height:1.45}
+.memo-label{font-size:13px;color:var(--muted);margin-bottom:-6px}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{display:inline-flex;align-items:center;gap:6px;background:var(--surface2);border-radius:999px;padding:2px 4px 2px 10px;font-size:13px;font-variant-numeric:tabular-nums}
+.chip.neg{color:var(--bad)}
+.chip small{color:var(--muted)}
+.chip button{width:28px;height:28px;border-radius:50%;border:0;background:transparent;cursor:pointer;color:var(--muted)}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:14px;display:flex;flex-direction:column;gap:12px;min-width:0}
+.card h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px}
+.cardhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.kpi{background:var(--bg);border-radius:10px;padding:10px 12px;display:flex;flex-direction:column;min-width:0}
+.kpi span{font-size:13px;color:var(--muted)}
+.kpi b{font-family:var(--font-display);font-weight:400;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
+.kpi small{color:var(--muted);font-variant-numeric:tabular-nums}
+.kpi.wide{grid-column:1/-1}
+.wfield{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700}
+.wfield span{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+.wfield input{width:130px;height:46px;text-align:right;font-variant-numeric:tabular-nums}
+.hint,.state p{white-space:pre-wrap;overflow-wrap:anywhere}
+.hint{margin:0;color:var(--muted);font-size:13px}
+
+.seg{display:flex;gap:6px;flex-wrap:wrap}
+.seg button{min-height:38px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:500}
+.seg button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:700}
+
+.scroll{overflow-x:auto}
+.tbl{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums;min-width:420px}
+.tbl th,.tbl td{padding:10px 8px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap}
+.tbl th:first-child,.tbl td:first-child{text-align:left}
+.tbl thead th{font-size:13px;color:var(--muted);font-weight:500}
+.tbl tfoot td{font-weight:700;border-bottom:0}
+.tbl td.memo-row{white-space:normal;text-align:left;color:var(--muted);font-size:13px;padding-top:0}
+.datebtn{background:none;border:0;padding:0;cursor:pointer;text-align:left;display:flex;flex-direction:column;line-height:1.25;font-weight:700;color:var(--accent)}
+.datebtn small{color:var(--muted);font-weight:400}
+.bad{color:var(--bad)}
+
+.tabs{position:fixed;left:0;right:0;bottom:0;display:flex;background:var(--surface);border-top:1px solid var(--line);z-index:20;
+  padding-bottom:env(safe-area-inset-bottom,0px);padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.tab[hidden]{display:none}
+.tab{flex:1;min-width:0;min-height:60px;background:none;border:0;border-top:3px solid transparent;color:var(--muted);font-weight:700;font-size:15px;padding:0 2px;cursor:pointer}
+.tab[aria-selected=true]{color:var(--accent);border-top-color:var(--accent)}
+
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(74px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:999px;font-weight:700;z-index:40;max-width:calc(100% - 32px)}
+.sheet{position:fixed;inset:0;background:rgba(10,20,17,.55);z-index:50;display:flex;align-items:flex-end;justify-content:center}
+.sheet[hidden]{display:none}
+.panel{background:var(--surface);width:100%;max-width:560px;max-height:92%;overflow-y:auto;border-radius:16px 16px 0 0;padding:16px;display:flex;flex-direction:column;gap:14px;
+  padding-bottom:calc(16px + env(safe-area-inset-bottom,0px));padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.panel h2{margin:0;font-family:var(--font-display);font-weight:400;font-size:22px}
+.panelhead{display:flex;justify-content:space-between;align-items:center}
+.cyc-list{display:flex;flex-direction:column;gap:8px}
+.cyc-item{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:52px;padding:8px 14px;border-radius:10px;border:1px solid var(--line);background:var(--bg);cursor:pointer;text-align:left}
+.cyc-item[aria-current=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cyc-item span{color:var(--muted);font-size:13px}
+.nform{display:flex;flex-direction:column;gap:10px;border-top:1px solid var(--line);padding-top:14px}
+.nfield{display:flex;flex-direction:column;gap:4px;font-weight:700}
+.nfield input{height:48px;font-weight:400}
+.prev{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:6px}
+.prev div{background:var(--bg);border-radius:8px;padding:6px 10px;display:flex;justify-content:space-between;gap:8px;font-variant-numeric:tabular-nums}
+.prev div span{color:var(--muted)}
+.err{margin:0;color:var(--bad);font-size:14px}
+.tbl.sum{min-width:0}.tbl.sum th,.tbl.sum td{padding:8px 8px;white-space:nowrap}.tbl.sum th:first-child,.tbl.sum td:first-child{min-width:112px;font-size:13px;position:sticky;left:0;background:var(--surface)}
+.nnote{width:100%;min-height:68px;padding:10px 12px;resize:vertical;font:400 16px/1.45 var(--font-body);border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+.gctl{display:flex;flex-direction:column;gap:8px}
+.legend{display:flex;flex-wrap:wrap;gap:6px}
+.lg{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:999px;border:1px solid var(--line);background:var(--surface);cursor:pointer;font-weight:500}
+.lg[aria-pressed=false]{opacity:.45}
+.sw{display:inline-block;width:16px;height:3px;border-radius:2px}
+.gwrap{position:relative}
+.gsvg{display:block;width:100%;height:auto;touch-action:pan-y}
+.gsvg text{fill:var(--muted);font-size:11px;font-family:var(--font-body);font-variant-numeric:tabular-nums}
+.gl{stroke:var(--grid);stroke-width:1}
+.ga{stroke:var(--axis);stroke-width:1}
+.ln{fill:none;stroke-width:2;stroke-linejoin:round;stroke-linecap:round}
+.gcur{stroke:var(--axis);stroke-width:1}
+.gtip{position:absolute;top:6px;pointer-events:none;background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.18);min-width:128px;z-index:5}
+.gtip b{display:block;margin-bottom:4px}
+.gtip div{display:flex;align-items:center;gap:10px;justify-content:space-between;font-variant-numeric:tabular-nums}
+.gtip span{display:flex;align-items:center;gap:6px}
+.gtip i{width:10px;height:10px;border-radius:50%;display:inline-block}
+.srow{display:grid;grid-template-columns:44px minmax(0,1fr) minmax(0,1fr);gap:8px;align-items:center}
+.srow b{font-family:var(--font-display);font-weight:400;font-size:20px}
+.sin{height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 8px;font:14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;letter-spacing:0;text-transform:uppercase;width:100%;min-width:0}
+.wrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.wrow b{width:44px;font-family:var(--font-display);font-weight:400;font-size:20px}
+.win{width:72px;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);padding:0 10px;font-size:18px;text-align:right;font-variant-numeric:tabular-nums}
+.flist{display:flex;flex-direction:column;gap:6px;font-size:13px}
+.flist div{background:var(--bg);border-radius:8px;padding:8px 10px;display:flex;flex-direction:column;gap:2px;min-width:0;overflow-wrap:anywhere}
+.flist .ok{color:var(--good);font-weight:700}
+.flist .no{color:var(--bad);font-weight:700}
+.radios{display:flex;flex-direction:column;gap:6px}
+.radios label{display:flex;align-items:center;gap:10px;min-height:44px}
+.radios input{width:22px;height:22px}
+.mute{color:var(--muted)}
+.tbl td small{display:block;color:var(--muted);font-size:11px}
+.cyc-card{border:1px solid var(--line);border-radius:12px;background:var(--bg);padding:12px;display:flex;flex-direction:column;gap:10px;min-width:0}
+.cyc-card[aria-current=true]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.cyc-main{display:flex;flex-direction:column;gap:2px;min-width:0}
+.cyc-main b{font-family:var(--font-display);font-weight:400;font-size:22px;line-height:1.2;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.cyc-main span{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.badge{font-family:var(--font-body);font-size:12px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 9px}
+.cyc-btns{display:flex;gap:8px;flex-wrap:wrap}
+.cyc-btns .btn{min-height:42px;padding:0 14px;flex:1 1 auto}
+.confirm{display:flex;flex-direction:column;gap:8px;border-top:1px solid var(--line);padding-top:10px}
+.frow{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}
+.bk{width:100%;min-height:150px;font:12px/1.4 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;color:var(--ink)}
+.sd-row{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700;min-height:48px}
+.sd-row .s{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
+.sfld{height:46px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:0 10px;font-size:17px;text-align:right;font-variant-numeric:tabular-nums;min-width:0}
+.sd-row .sfld{width:150px}
+.sfld.sm{width:104px}
+select.sfld{text-align:left;padding-right:4px}
+.vrow{display:flex;align-items:center;gap:8px}.vrow>span:first-child{width:56px;font-weight:700}.vrow .sfld{flex:1}.vrow .u{color:var(--muted)}
+.erow{display:grid;grid-template-columns:minmax(0,1fr) 112px auto;gap:8px;align-items:center}.erow .sfld:first-child{text-align:left}
+.tbl.stmt{min-width:0}.tbl.stmt td:first-child{white-space:normal}.tbl.stmt td{vertical-align:top}
+.tbl.stmt tr.sec td{background:var(--surface2);font-weight:700;color:var(--ink);padding:6px 8px}
+.tbl.stmt tr.tot td{font-weight:700;border-top:2px solid var(--line)}
+.tbl.stmt tr.net td{font-weight:700;font-size:18px;background:var(--bg)}
+.tbl.mon{min-width:520px}
+@media (prefers-reduced-motion:no-preference){.btn,.tab,.seg button{transition:background .12s,color .12s}}
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <header class="top">
+    <div class="titlebar">
+      <button type="button" class="cyc" id="cycBtn" aria-haspopup="dialog">
+        <span class="cyc-title" id="cycTitle">작업일지</span>
+        <span class="cyc-age" id="cycAge" hidden></span>
+        <span class="caret" aria-hidden="true">▾</span>
+      </button>
+      <button type="button" class="btn" id="newBtn">새 입식</button>
+    </div>
+    <p class="notice" id="notice" hidden></p>
+    <p class="notice" id="syncNote" hidden>기록을 불러오는 중입니다. 잠시 후 숫자가 갱신됩니다.</p>
+  </header>
+  <main>
+    <section id="pane-home" class="pane" role="tabpanel" aria-label="입식"></section>
+    <section id="pane-input" class="pane" role="tabpanel" aria-label="입력" hidden></section>
+    <section id="pane-log" class="pane" role="tabpanel" aria-label="기록" hidden></section>
+    <section id="pane-avg" class="pane" role="tabpanel" aria-label="평균" hidden></section>
+    <section id="pane-graph" class="pane" role="tabpanel" aria-label="그래프" hidden></section>
+    <section id="pane-sensor" class="pane" role="tabpanel" aria-label="센서" hidden></section>
+    <section id="pane-settle" class="pane" role="tabpanel" aria-label="정산" hidden></section>
+  </main>
+</div>
+
+<nav class="tabs" role="tablist" aria-label="화면 선택">
+  <button type="button" class="tab" role="tab" data-tab="home" aria-selected="true">입식</button>
+  <button type="button" class="tab" role="tab" data-tab="input" aria-selected="false">입력</button>
+  <button type="button" class="tab" role="tab" data-tab="log" aria-selected="false">기록</button>
+  <button type="button" class="tab" role="tab" data-tab="avg" aria-selected="false">평균</button>
+  <button type="button" class="tab" role="tab" data-tab="graph" aria-selected="false">그래프</button>
+  <button type="button" class="tab" role="tab" data-tab="sensor" aria-selected="false">센서</button>
+  <button type="button" class="tab" role="tab" data-tab="settle" aria-selected="false">정산</button>
+</nav>
+
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<style>
+#login{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:24px}
+#login[hidden]{display:none}
+#login form{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--line);border-radius:16px;padding:22px;display:grid;gap:12px}
+#login h1{margin:0 0 4px;font:400 26px var(--font-display)}
+#login label{display:grid;gap:4px;font-size:13px;color:var(--muted)}
+#login input{height:48px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);font-size:17px;padding:0 12px}
+#login button{height:50px;border:0;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:17px;font-weight:700}
+#login button:disabled{opacity:.5}
+#login .lerr{color:var(--bad);font-size:14px;margin:0;min-height:20px}
+.signout{text-align:center;padding:18px 0 6px;color:var(--muted);font-size:13px}
+.signout button{border:1px solid var(--line);background:var(--surface);color:var(--ink);border-radius:8px;padding:6px 12px;font-size:13px;margin-left:8px}
+</style>
+<div id="login" hidden><form id="loginForm" autocomplete="on">
+<h1>오리농장 작업일지</h1>
+<label>이메일<input id="lgEmail" type="email" name="email" autocomplete="username" inputmode="email" required></label>
+<label>비밀번호<input id="lgPw" type="password" name="password" autocomplete="current-password" required></label>
+<p class="lerr" id="lgErr" role="alert"></p>
+<button type="submit" id="lgBtn">로그인</button>
+</form></div>
+<div class="signout"><span id="whoami"></span><button type="button" id="fbOut" hidden>로그아웃</button></div>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+(function(){
+'use strict';
+var AREAS=[253,363,363,416,140];            /* 동별 면적: 배분 계산에만 사용, 화면에는 표시하지 않음 */
+var SUM=AREAS.reduce(function(a,b){return a+b;},0);
+var SERVICE=0.02;
+var HOUSES=[1,2,3,4,5];
+var TYPES=[{k:'cull',label:'도태',int:true},{k:'dead',label:'폐사',int:true},{k:'feed',label:'사료 입고',int:false}];
+var FIELDS=[{f:'tm',w:'tm',label:'아침'},{f:'tn',w:'tn',label:'점심'},{f:'te',w:'te',label:'저녁'}];
+var HFIELDS=[{f:'hm',w:'tm',label:'아침'},{f:'hn',w:'tn',label:'점심'},{f:'he',w:'te',label:'저녁'}];
+var ALLF=FIELDS.concat(HFIELDS);
+function fieldsFor(m){return m==='humi'?HFIELDS:FIELDS;}
+function isEnv(m){return m==='temp'||m==='humi';}
+
+function $(id){return document.getElementById(id);}
+function fmt(n,d){return Number(n).toLocaleString('ko-KR',{maximumFractionDigits:d||0,minimumFractionDigits:d||0});}
+function fmtN(n){return fmt(n,Number.isInteger(Math.round(n*10)/10)&&Math.abs(n-Math.round(n))<0.05?0:1);}
+function fmtT(v){return v==null?'–':v.toFixed(1);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+function isNum(v){return typeof v==='number'&&isFinite(v);}
+function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length:null;}
+function todayStr(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});}
+function dayNum(s){var p=s.split('-').map(Number);return Math.round(Date.UTC(p[0],p[1]-1,p[2])/86400000);}
+function addDays(s,n){return new Date((dayNum(s)+n)*86400000).toISOString().slice(0,10);}
+function dot(s){return s.replace(/-/g,'.');}
+function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
+
+var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false},
+  entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
+var VER='v14';
+function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
+
+function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
+function lsGet(k){try{return localStorage.getItem(k);}catch(e){return null;}}
+function lsSet(k,v){try{localStorage.setItem(k,v);}catch(e){}}
+
+var toastTimer=null;
+function toast(msg){var t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.hidden=true;},1600);}
+function notice(msg,bad){var n=$('notice');if(!msg){n.hidden=true;return;}n.textContent=msg;n.className='notice'+(bad?' bad':'');n.hidden=false;}
+function handleErr(e){
+  var code=e&&e.code;
+  if(code==='invalid_argument'||code==='permission-denied'){S.canWrite=false;notice('이 계정으로는 입력할 수 없습니다. 관리자에게 계정 등록을 요청하세요.',true);updateRO();}
+  else if(code==='quota_exceeded'){notice('저장 공간이 가득 찼습니다. 지난 입식 기록을 삭제한 뒤 다시 시도하세요.',true);}
+  else if(code==='revoked'){notice('접근 권한이 바뀌어 더 이상 저장할 수 없습니다.',true);}
+  else{toast('저장하지 못했습니다. 다시 시도하세요.');}
+}
+
+/* ---------- 입식 배분: 총 마릿수 × 1.02 를 동 면적 비례로 나눔 ---------- */
+function allocate(total){
+  var target=Math.round(total*(1+SERVICE));
+  var raw=AREAS.map(function(a){return target*a/SUM;});
+  var fl=raw.map(Math.floor);
+  var rem=target-fl.reduce(function(a,b){return a+b;},0);
+  var order=raw.map(function(r,i){return [r-fl[i],i];}).sort(function(a,b){return b[0]-a[0];});
+  for(var k=0;k<rem;k++){fl[order[k][1]]++;}
+  return fl;
+}
+
+/* ---------- 집계 ---------- */
+function agg(){
+  var out={tot:{},byDate:{},dates:new Set()};
+  HOUSES.forEach(function(h){out.tot[h]={cull:0,dead:0,feed:0};});
+  S.entries.forEach(function(e){
+    var h=e.h;if(!out.tot[h])return;var q=Number(e.q)||0;
+    out.tot[h][e.t]+=q;
+    var d=out.byDate[e.d]||(out.byDate[e.d]={});
+    var x=d[h]||(d[h]={cull:0,dead:0,feed:0});x[e.t]+=q;out.dates.add(e.d);
+  });
+  S.days.forEach(function(v){if(v&&v.d)out.dates.add(v.d);});
+  return out;
+}
+function dayDoc(cid,d,h){return S.days.get(cid+'_'+d+'_'+h)||null;}
+function headsOf(c,h){return Number(c.heads&&c.heads[h])||0;}
+
+/* ---------- 구독 ---------- */
+function subscribeCycle(cid){
+  S.unsubs.forEach(function(u){try{u();}catch(e){}});S.unsubs=[];
+  S.entries=new Map();S.days=new Map();S.inKey=null;S.avgKey=null;S.settle=null;S.stKey=null;
+  S.sync={e:false,d:false};
+  if(!cid||!S.db)return;
+  var onErr=function(e){handleErr(e);};
+  /* 아직 확정되지 않은 빈 결과는 무시하고, 확정된 결과만 화면에 반영한다 */
+  var apply=function(key,store){return function(s2){
+    if(cid!==S.cid)return;
+    if(s2.empty&&s2.metadata&&s2.metadata.fromCache)return;
+    var m=new Map();s2.docs.forEach(function(d){m.set(d.id,d.data());});
+    S[store]=m;S.sync[key]=true;render();
+  };};
+  var onE=apply('e','entries'),onD=apply('d','days');
+  S.unsubs.push(S.db.collection('entries').where('c','==',cid).onSnapshot(onE,onErr));
+  S.unsubs.push(S.db.collection('days').where('c','==',cid).onSnapshot(onD,onErr));
+  var onS=function(sn){
+    if(cid!==S.cid)return;
+    if(!sn.exists&&sn.metadata&&sn.metadata.fromCache)return;
+    S.settle=sn.exists?Object.assign({},sn.data()):null;
+    if(S.tab==='settle')refreshSettle();
+  };
+  if(isOwner()){S.unsubs.push(S.db.doc('settle/'+cid).onSnapshot(onS,onErr));
+  S.db.doc('settle/'+cid).get().then(onS).catch(function(){});}
+  S.db.collection('entries').where('c','==',cid).get().then(onE).catch(function(){});
+  S.db.collection('days').where('c','==',cid).get().then(onD).catch(function(){});
+}
+function selectCycle(cid){
+  S.cid=cid;if(cid)lsSet('wl-cid',cid);
+  subscribeCycle(cid);render();
+}
+function onCycles(snap,fromGet){
+  /* 확정되지 않은 빈 목록은 "입식 없음"으로 보여주지 않는다
+     (단, get() 으로 두 번 연속 비어 있다고 확인되면 정말 비어 있는 것) */
+  if(snap.empty&&snap.metadata&&snap.metadata.fromCache){
+    if(fromGet){S.emptyGets=(S.emptyGets||0)+1;}
+    if(!(fromGet&&S.emptyGets>=2))return;
+  }
+  S.cycles=snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o;}).sort(function(a,b){return String(b.stockDate).localeCompare(String(a.stockDate));});
+  S.ready=true;S.stale=false;S.cyclesDef=true;
+  try{lsSet('wl-cyc',JSON.stringify(S.cycles.slice(0,30)));}catch(e){}
+  if(!cyc()){
+    var pref=lsGet('wl-cid');var next=null;
+    for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===pref){next=pref;break;}}
+    if(!next&&S.cycles.length)next=S.cycles[0].id;
+    selectCycle(next);
+  }else{
+    if(S.cid&&S.db&&!S.unsubs.length)subscribeCycle(S.cid);
+    render();
+  }
+}
+/* 입식 목록 색인: 컬렉션 조회가 응답하지 않는 기기에서도 문서 단위 읽기로 목록을 복구한다 */
+function idxChange(fn){
+  if(!S.db)return Promise.resolve();
+  return S.db.doc('settings/index').get().then(function(sn){
+    var ids=(sn.exists&&sn.data().ids)||[];ids=ids.slice();
+    var next=fn(ids);
+    return S.db.doc('settings/index').set({ids:next,updatedAt:Date.now()});
+  }).catch(function(){});
+}
+function idxAdd(id){return idxChange(function(ids){if(ids.indexOf(id)<0)ids.push(id);return ids;});}
+function idxDel(id){return idxChange(function(ids){return ids.filter(function(x){return x!==id;});});}
+function loadIndex(){
+  if(!S.db||S.cyclesDef)return;
+  withTimeout(S.db.doc('settings/index').get(),8000).then(function(sn){
+    if(sn===TO){S.dbg.색인='시간초과';return;}
+    if(S.cyclesDef)return;
+    if(!sn.exists){S.dbg.색인='없음';return;}
+    var ids=sn.data().ids||[];S.dbg.색인=ids.length+'건';if(!ids.length)return;
+    return Promise.all(ids.map(function(id){
+      return withTimeout(S.db.doc('cycles/'+id).get(),8000).then(function(d){
+        if(d===TO){S.dbg.문서='시간초과';return null;}if(!d.exists){S.dbg.문서='없음';return null;}var o=Object.assign({},d.data());o.id=d.id;return o;
+      }).catch(function(){return null;});
+    })).then(function(list){
+      list=list.filter(Boolean);
+      if(S.cyclesDef||!list.length)return;
+      onCycles({empty:false,metadata:{fromCache:false},docs:list.map(function(o){var id=o.id;return {id:id,data:function(){var c=Object.assign({},o);delete c.id;return c;}};})},false);
+    });
+  }).catch(function(e){S.dbg.색인='오류 '+((e&&(e.code||e.message))||'?');});
+}
+function loadCycles(n){
+  if(S.cyclesDef||!S.db)return;
+  loadIndex();
+  withTimeout(S.db.collection('cycles').get(),8000)
+    .then(function(snap){if(snap===TO){S.dbg.목록='시간초과';}else{S.dbg.목록=snap.docs.length+'건'+(snap.metadata&&snap.metadata.fromCache?'(캐시)':'');onCycles(snap,true);}})
+    .catch(function(e){S.dbg.목록='오류 '+((e&&(e.code||e.message))||'?');handleErr(e);})
+    .then(function(){
+      if(S.cyclesDef)return;
+      if(n<10)setTimeout(function(){loadCycles(n+1);},4000);
+      else if(!S.ready){S.status='저장소에 연결하지 못했습니다. 인터넷 연결을 확인하고 화면을 새로고침하세요.';render();}
+    });
+}
+
+/* ---------- 쓰기 ---------- */
+function addEntry(h,t,q,inp,raw){
+  if(!S.db||!S.cid||!S.canWrite)return;
+  if(overAge()){toast('7주령(49일령)까지만 입력할 수 있습니다');if(inp&&!inp.value)inp.value=raw;return;}
+  S.db.collection('entries').add({c:S.cid,d:S.date,h:h,t:t,q:q,by:S.uid||null,at:Date.now()})
+    .then(function(){toast('저장됨');})
+    .catch(function(e){if(inp&&!inp.value)inp.value=raw;handleErr(e);});
+}
+var chain={},pend={},stamp={};
+function saveDayField(h,f,val){
+  if(!S.db||!S.cid||!S.canWrite)return;
+  if(overAge()){toast('7주령(49일령)까지만 입력할 수 있습니다');return;}
+  var date=S.date,cid=S.cid,key=cid+'_'+date+'_'+h;
+  var base=Object.assign({c:cid,d:date,h:h},S.days.get(key)||{},pend[key]||{});
+  base[f]=val;
+  pend[key]=Object.assign({},pend[key]||{});pend[key][f]=val;
+  var n=(stamp[key]=(stamp[key]||0)+1);
+  chain[key]=(chain[key]||Promise.resolve()).then(function(){return S.db.doc('days/'+key).set(base);})
+    .then(function(){if(stamp[key]===n)delete pend[key];toast('저장됨');})
+    .catch(function(e){handleErr(e);});
+}
+
+/* ---------- 화면 ---------- */
+function emptyHTML(loading){
+  if(loading)return '<div class="state"><p>'+esc(S.status)+'</p></div>';
+  if(!S.db)return '<div class="state"><h2>저장소에 연결되지 않았습니다</h2><p>인터넷 연결을 확인하고 앱을 다시 열어 주세요.</p></div>';
+  return '<div class="state"><h2>입식 기록이 없습니다</h2><p>입식일과 총 마릿수를 넣으면 동별 마릿수가 자동으로 나뉘고, 도태·폐사·사료·온도 입력을 시작할 수 있습니다.</p><button type="button" class="btn primary" data-act="new">첫 입식 등록</button></div>';
+}
+function renderHeader(){
+  var c=cyc();
+  var sn=$('syncNote');if(sn)sn.hidden=!(S.cid&&S.ready&&(S.stale||(S.db&&!(S.sync.e&&S.sync.d))));
+  if(!c){$('cycTitle').textContent=S.ready?'입식을 등록하세요':'작업일지';$('cycAge').hidden=true;return;}
+  $('cycTitle').textContent=dot(c.stockDate)+' 입식';
+  var a=ageOf(c,S.date);
+  $('cycAge').hidden=a<1;$('cycAge').textContent=a+'일령';
+}
+function render(){
+  if(!isOwner()&&(S.tab==='sensor'||S.tab==='settle'))S.tab='home';
+  var cc0=cyc();if(cc0&&S.date>maxDateOf(cc0))S.date=maxDateOf(cc0);
+  renderHeader();
+  ['home','input','log','avg','graph','sensor','settle'].forEach(function(t){$('pane-'+t).hidden=S.tab!==t;});
+  document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===S.tab?'true':'false');b.hidden=!isOwner()&&(b.dataset.tab==='sensor'||b.dataset.tab==='settle');});
+  if(S.tab==='home'){renderHome();updateRO();return;}
+  if(S.tab==='sensor'){renderSensor();return;}
+  if(S.tab==='settle'){renderSettle();return;}
+  if(S.tab==='graph'){renderGraph();return;}
+  var pane=$('pane-'+S.tab),c=cyc();
+  if(!S.ready||!c){
+    pane.innerHTML=emptyHTML(!S.ready);S.inKey=null;S.avgKey=null;return;
+  }
+  if(S.tab==='input')renderInput();else if(S.tab==='log')renderLog();else renderAvg();
+  updateRO();
+}
+function updateRO(){
+  var ro=!S.canWrite;
+  document.querySelectorAll('#pane-input input,#pane-input textarea,#pane-input .sign,#pane-avg #wIn').forEach(function(e){
+    if(e.id==='dateIn')return;e.disabled=ro;
+  });
+  var ns=$('nSave');if(ns)ns.disabled=ro;
+}
+
+/* 입력 탭 */
+function cardHTML(h){
+  var rows=TYPES.map(function(t){
+    return '<div class="row"><div class="row-label"><span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
+      '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
+      '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>';
+  }).join('');
+  var temps=FIELDS.map(function(x){
+    return '<label>'+x.label+' ℃<input class="tin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="–"></label>';
+  }).join('');
+  var hums=HFIELDS.map(function(x){
+    return '<label>'+x.label+' %<input class="hin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="–" aria-label="'+h+'동 '+x.label+' 습도"></label>';
+  }).join('');
+  return '<section class="house" data-h="'+h+'"><div class="house-head"><h3>'+h+'동</h3>'+
+    '<div class="house-now"><b data-now>0</b>남은 수 · 입식 <span data-init>0</span></div></div>'+rows+
+    '<div class="temps">'+temps+'</div>'+
+    '<div class="temps hums">'+hums+'</div>'+
+    '<div class="works"><label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업">로터리</label>'+
+    '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="hk" aria-label="'+h+'동 왕겨 작업">왕겨</label>'+
+    '<label class="hkl">kg<input class="kin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="hkg" placeholder="kg" aria-label="'+h+'동 왕겨 kg" disabled></label></div>'+
+    '<div class="memo-label">비고</div><textarea class="memo" data-h="'+h+'" data-f="memo" aria-label="'+h+'동 비고" placeholder="오늘 특이사항"></textarea>'+
+    '<div class="chips" data-chips></div></section>';
+}
+function renderInput(){
+  var key=S.cid+'|'+S.date;
+  if(S.inKey!==key||!$('houses')){
+    $('pane-input').innerHTML=
+      '<div class="datebar"><button type="button" class="btn" data-act="prev" aria-label="전날">‹</button>'+
+      '<input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+maxDateOf(cyc())+'" aria-label="날짜">'+
+      '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
+      '<button type="button" class="btn" data-act="today">오늘</button></div>'+
+      '<div class="sumline" id="sumline"></div><div class="houses" id="houses">'+HOUSES.map(cardHTML).join('')+'</div>';
+    S.inKey=key;
+  }
+  refreshInput();
+}
+function setVal(inp,v){
+  if(!inp||document.activeElement===inp)return;
+  var s=v==null?'':String(v);if(inp.value!==s)inp.value=s;
+}
+function refreshInput(){
+  var c=cyc(),A=agg(),pane=$('pane-input');
+  /* 선택한 날짜까지(입식일~그날)만 누적: 이후 날짜의 입력은 제외 */
+  var CUM={};HOUSES.forEach(function(h){CUM[h]={cull:0,dead:0,feed:0};});
+  S.entries.forEach(function(e){
+    if(!e||!CUM[e.h]||!CUM[e.h].hasOwnProperty(e.t)||String(e.d)>S.date)return;
+    CUM[e.h][e.t]+=Number(e.q)||0;
+  });
+  var nowAll=0,initAll=0,tdC=0,tdD=0,tdF=0;
+  HOUSES.forEach(function(h){
+    var card=pane.querySelector('.house[data-h="'+h+'"]');if(!card)return;
+    var init=headsOf(c,h),tot=CUM[h],now=init-tot.cull-tot.dead;
+    nowAll+=now;initAll+=init;
+    card.querySelector('[data-now]').textContent=fmt(now);
+    card.querySelector('[data-init]').textContent=fmt(init);
+    var day=(A.byDate[S.date]||{})[h]||{cull:0,dead:0,feed:0};
+    tdC+=day.cull;tdD+=day.dead;tdF+=day.feed;
+    TYPES.forEach(function(t){
+      card.querySelector('[data-sum="'+t.k+'"]').textContent='오늘 '+fmtN(day[t.k])+' · 누계 '+fmtN(tot[t.k])+(t.k==='feed'?' kg':'');
+    });
+    var dd=dayDoc(S.cid,S.date,h)||{};
+    ALLF.forEach(function(x){setVal(card.querySelector('[data-f="'+x.f+'"]'),dd[x.f]);});
+    var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
+    if(ckR)ckR.checked=dd.rot===true;
+    if(ckH)ckH.checked=dd.hk===true;
+    if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;}
+    setVal(card.querySelector('textarea'),dd.memo);
+    var list=[];
+    S.entries.forEach(function(e,id){if(e.d===S.date&&e.h===h)list.push({id:id,e:e});});
+    list.sort(function(a,b){return (a.e.at||0)-(b.e.at||0);});
+    card.querySelector('[data-chips]').innerHTML=list.map(function(x){
+      var lab=TYPES.filter(function(t){return t.k===x.e.t;})[0];
+      var q=Number(x.e.q)||0;
+      var tm=x.e.at?new Date(x.e.at).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}):'';
+      return '<span class="chip'+(q<0?' neg':'')+'">'+esc(lab?lab.label:x.e.t)+' '+(q>0?'+':'')+fmtN(q)+'<small>'+tm+'</small>'+
+        '<button type="button" data-del="'+esc(x.id)+'" aria-label="이 입력 취소">✕</button></span>';
+    }).join('');
+  });
+  var od=dayDoc(S.cid,S.date,0);
+  var cnt=(od&&FIELDS.some(function(f){return isNum(od[f.f]);}))?'<span>외부 <b>'+FIELDS.map(function(f){return fmtT(od[f.f]);}).join(' · ')+'</b> ℃</span>':'';
+  if(od&&HFIELDS.some(function(f){return isNum(od[f.f]);}))cnt+='<span>외부 습도 <b>'+HFIELDS.map(function(f){return fmtT(od[f.f]);}).join(' · ')+'</b> %</span>';
+  $('sumline').innerHTML='<span class="hint">입력은 '+MAXAGE+'일령(7주령, '+dot(maxDateOf(c))+')까지</span><span>전체 '+dot(S.date)+' 기준 <b>'+fmt(nowAll)+'</b>수 / 입식 '+fmt(initAll)+'수</span>'+
+    '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+cnt;
+  var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
+}
+
+/* 기록 탭 */
+function segHTML(){
+  var items=[['all','전체']].concat(HOUSES.map(function(h){return [String(h),h+'동'];}));
+  return '<div class="seg" role="group" aria-label="동 선택">'+items.map(function(x){
+    return '<button type="button" data-filter="'+x[0]+'" aria-pressed="'+(S.filter===x[0])+'">'+x[1]+'</button>';
+  }).join('')+'</div>';
+}
+function selHouses(){return S.filter==='all'?HOUSES:[Number(S.filter)];}
+function renderLog(){
+  var c=cyc(),A=agg(),hs=selHouses();
+  var dates=Array.from(A.dates).filter(function(d){return d>=c.stockDate;}).sort().reverse();
+  var tc=0,td=0,tf=0;
+  var body=dates.map(function(d){
+    var cull=0,dead=0,feed=0,T={tm:[],tn:[],te:[],hm:[],hn:[],he:[]},memos=[],works=[];
+    hs.forEach(function(h){
+      var x=(A.byDate[d]||{})[h];if(x){cull+=x.cull;dead+=x.dead;feed+=x.feed;}
+      var dd=dayDoc(S.cid,d,h);
+      if(dd){ALLF.forEach(function(f){if(isNum(dd[f.f]))T[f.f].push(dd[f.f]);});
+        if(dd.memo&&String(dd.memo).trim())memos.push(h+'동 '+String(dd.memo).trim());
+        var wt=workText(dd);if(wt)works.push((hs.length>1?h+'동 ':'')+wt);}
+    });
+    tc+=cull;td+=dead;tf+=feed;
+    var a=ageOf(c,d);
+    var row='<tr><td><button type="button" class="datebtn" data-d="'+d+'">'+d.slice(5).replace('-','.')+'<small>'+a+'일령</small></button></td>'+
+      '<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+fmtN(feed)+'</td>'+
+      '<td>'+fmtT(mean(T.tm))+' · '+fmtT(mean(T.tn))+' · '+fmtT(mean(T.te))+'</td><td>'+fmtT(mean(T.hm))+' · '+fmtT(mean(T.hn))+' · '+fmtT(mean(T.he))+'</td><td>'+(works.length?esc(works.join(' / ')):'–')+'</td></tr>';
+    if(memos.length)row+='<tr><td colspan="7" class="memo-row">'+esc(memos.join('  /  '))+'</td></tr>';
+    return row;
+  }).join('');
+  $('pane-log').innerHTML='<div class="cardhead"><h2 style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">날짜별 기록</h2>'+segHTML()+'</div>'+
+    (dates.length?'<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>날짜</th><th>도태</th><th>폐사</th><th>사료 입고(kg)</th><th>온도 아침·점심·저녁</th><th>습도 % 아침·점심·저녁</th><th>작업</th></tr></thead><tbody>'+body+
+    '</tbody><tfoot><tr><td>누계</td><td>'+fmtN(tc)+'</td><td>'+fmtN(td)+'</td><td>'+fmtN(tf)+'</td><td></td><td></td><td></td></tr></tfoot></table></div></div>'
+    :'<div class="state"><p>아직 입력한 기록이 없습니다. 입력 탭에서 도태·폐사·사료·온도를 넣으면 날짜별로 모입니다.</p></div>');
+}
+
+/* 작업(로터리·왕겨) 집계 */
+function workTally(hs){
+  var o={rot:0,hk:0,kg:0,by:{}};
+  S.days.forEach(function(dd){
+    if(!dd||dd.h===0||hs.indexOf(dd.h)<0)return;
+    var b=o.by[dd.h]||(o.by[dd.h]={rot:0,hk:0,kg:0});
+    if(dd.rot===true){o.rot++;b.rot++;}
+    if(dd.hk===true){o.hk++;b.hk++;var k=Number(dd.hkg)||0;o.kg+=k;b.kg+=k;}
+  });
+  return o;
+}
+function workText(dd){
+  if(!dd)return '';
+  var a=[];if(dd.rot===true)a.push('로터리');
+  if(dd.hk===true)a.push('왕겨'+(Number(dd.hkg)>0?' '+fmtN(Number(dd.hkg))+'kg':''));
+  return a.join(', ');
+}
+/* 평균 탭 */
+function buildAvg(){
+  $('pane-avg').innerHTML=
+    '<section class="card"><h2>싸이클 평균</h2><div class="kpis" id="kpis"></div>'+
+    '<label class="wfield"><div>예상 중량<span>마리당 kg</span></div><input id="wIn" type="text" inputmode="decimal" autocomplete="off" placeholder="예: 3.2"></label>'+
+    '<p class="hint">사료요구율 = 사료 입고 누계 ÷ (현재 사육 마릿수 × 예상 중량)</p></section>'+
+    '<section class="card"><h2>동별 현황</h2><div class="scroll" id="houseTbl"></div></section>'+
+    '<section class="card"><div class="cardhead"><h2>주간 평균</h2><div id="segW"></div></div><div class="scroll" id="weekTbl"></div></section>';
+  S.avgKey=S.cid;
+}
+function renderAvg(){
+  if(S.avgKey!==S.cid||!$('kpis'))buildAvg();
+  var c=cyc(),A=agg(),w=Number(c.expectedWeight)||0;
+  var initAll=0,cull=0,dead=0,feed=0;
+  var T={tm:[],tn:[],te:[],hm:[],hn:[],he:[]};
+  var WT=workTally(HOUSES);
+  var hrows=HOUSES.map(function(h){
+    var init=headsOf(c,h),t=A.tot[h],now=init-t.cull-t.dead;
+    initAll+=init;cull+=t.cull;dead+=t.dead;feed+=t.feed;
+    var fpp=now>0?t.feed/now:null,fcr=(w>0&&now>0)?t.feed/(now*w):null;
+    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
+  }).join('');
+  var O={tm:[],tn:[],te:[],hm:[],hn:[],he:[]};
+  S.days.forEach(function(dd){var tg=dd.h===0?O:T;ALLF.forEach(function(f){if(isNum(dd[f.f]))tg[f.f].push(dd[f.f]);});});
+  var now=initAll-cull-dead,fpp=now>0?feed/now:null,fcr=(w>0&&now>0)?feed/(now*w):null;
+  var pct=function(x){return initAll>0?(x/initAll*100).toFixed(2)+'%':'–';};
+  $('kpis').innerHTML=
+    '<div class="kpi"><span>현재 사육 마릿수</span><b>'+fmt(now)+'</b><small>입식(2% 포함) '+fmt(initAll)+'수 대비 <b style="display:inline;font-size:inherit">'+pct(now)+'</b></small></div>'+
+    '<div class="kpi"><span>도태 누계</span><b>'+fmtN(cull)+'</b><small>'+pct(cull)+'</small></div>'+
+    '<div class="kpi"><span>폐사 누계</span><b>'+fmtN(dead)+'</b><small>'+pct(dead)+'</small></div>'+
+    '<div class="kpi"><span>도태+폐사 합산</span><b>'+fmtN(cull+dead)+'</b><small>'+pct(cull+dead)+'</small></div>'+
+    '<div class="kpi"><span>로터리</span><b>'+WT.rot+'<small> 회</small></b></div>'+
+    '<div class="kpi"><span>왕겨</span><b>'+WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small></b></div>'+
+    '<div class="kpi"><span>사료 입고 누계</span><b>'+fmtN(feed)+'<small> kg</small></b></div>'+
+    '<div class="kpi"><span>마리당 사료</span><b>'+(fpp==null?'–':fpp.toFixed(2))+'<small> kg</small></b></div>'+
+    '<div class="kpi"><span>사료요구율</span><b>'+(fcr==null?'–':fcr.toFixed(2))+'</b>'+(w>0?'':'<small>예상 중량을 입력하세요</small>')+'</div>'+
+    '<div class="kpi wide"><span>평균 온도 (아침 · 점심 · 저녁)</span><b>'+fmtT(mean(T.tm))+' · '+fmtT(mean(T.tn))+' · '+fmtT(mean(T.te))+'<small> ℃</small></b></div>'+
+    (O.tm.length||O.tn.length||O.te.length?'<div class="kpi wide"><span>외부 평균 온도 (아침 · 점심 · 저녁)</span><b>'+fmtT(mean(O.tm))+' · '+fmtT(mean(O.tn))+' · '+fmtT(mean(O.te))+'<small> ℃</small></b></div>':'')+
+    '<div class="kpi wide"><span>평균 습도 (아침 · 점심 · 저녁)</span><b>'+fmtT(mean(T.hm))+' · '+fmtT(mean(T.hn))+' · '+fmtT(mean(T.he))+'<small> %</small></b></div>'+
+    (O.hm.length||O.hn.length||O.he.length?'<div class="kpi wide"><span>외부 평균 습도 (아침 · 점심 · 저녁)</span><b>'+fmtT(mean(O.hm))+' · '+fmtT(mean(O.hn))+' · '+fmtT(mean(O.he))+'<small> %</small></b></div>':'');
+  setVal($('wIn'),c.expectedWeight);
+  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>동</th><th>현재 수</th><th>도태</th><th>폐사</th><th>합산</th><th>사료(kg)</th><th>마리당(kg)</th><th>요구율</th><th>로터리</th><th>왕겨</th></tr></thead><tbody>'+hrows+
+    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
+  $('segW').innerHTML=segHTML();
+  $('weekTbl').innerHTML=weekHTML(c,A);
+}
+function weekHTML(c,A){
+  var hs=selHouses();
+  var maxAge=Math.max(1,ageOf(c,todayStr()));
+  A.dates.forEach(function(d){var a=ageOf(c,d);if(a>=1)maxAge=Math.max(maxAge,a);});
+  var nW=Math.min(7,Math.ceil(maxAge/7));
+  var rows=[];
+  for(var wk=1;wk<=nW;wk++){
+    var lo=(wk-1)*7+1,hi=wk*7,cull=0,dead=0,feed=0,has=false,T={tm:[],tn:[],te:[],hm:[],hn:[],he:[]};
+    A.dates.forEach(function(d){
+      var a=ageOf(c,d);if(a<lo||a>hi)return;
+      hs.forEach(function(h){
+        var x=(A.byDate[d]||{})[h];if(x){cull+=x.cull;dead+=x.dead;feed+=x.feed;has=true;}
+        var dd=dayDoc(S.cid,d,h);
+        if(dd)ALLF.forEach(function(f){if(isNum(dd[f.f])){T[f.f].push(dd[f.f]);has=true;}});
+      });
+    });
+    rows.push('<tr><td>'+wk+'주차<br><small class="hint">'+lo+'~'+hi+'일령</small></td>'+
+      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tm))+' · '+fmtT(mean(T.tn))+' · '+fmtT(mean(T.te))+'</td><td>'+fmtT(mean(T.hm))+' · '+fmtT(mean(T.hn))+' · '+fmtT(mean(T.he))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
+  }
+  return '<table class="tbl"><thead><tr><th>주차</th><th>도태</th><th>폐사</th><th>합산</th><th>사료 입고(kg)</th><th>온도 평균 아·점·저</th><th>습도 평균 %</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+}
+
+/* ---------- 입식 탭: 등록 · 목록 · 수정 · 백업 · 복원 ---------- */
+function cycleById(id){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===id)return S.cycles[i];}return null;}
+function isOwner(){try{return !!(S.user&&S.user.isOwner&&S.user.isOwner());}catch(e){return false;}}
+function parseTotal(){var el=$('nTotal');return el?Math.round(Number(String(el.value).replace(/[,\s]/g,''))):NaN;}
+function nrow(label,id,unit){
+  return '<label class="sd-row"><span>'+label+'<span class="s">'+unit+'</span></span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" id="'+id+'" placeholder="0" aria-label="'+label+'"></label>';
+}
+function readNMonths(){var o={};document.querySelectorAll('#nMon [data-nm]').forEach(function(e){o[e.dataset.nm]=e.value;});return o;}
+function renderNMonths(){
+  var tb=$('nMon'),dt=$('nDate');if(!tb||!dt)return;
+  var cur=readNMonths(),d=dt.value;
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){tb.innerHTML='';return;}
+  var mk=monthKeys({stockDate:d});
+  tb.innerHTML=mk.map(function(k){
+    return '<tr><td>'+Number(k.slice(5,7))+'월<small>'+dimOf(k)+'일</small></td>'+
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-nm="fuel:'+k+'" placeholder="0" aria-label="'+k+' 연료 보조금"></td>'+
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-nm="litter:'+k+'" placeholder="0" aria-label="'+k+' 깔짚 보조금"></td></tr>';
+  }).join('');
+  Object.keys(cur).forEach(function(key){var el=tb.querySelector('[data-nm="'+key+'"]');if(el&&cur[key]!=='')el.value=cur[key];});
+}
+function readTerms(){
+  var out={},bad=false;
+  var one=function(id,k){var v=numOrNull($(id).value);if(v!==null&&(!isFinite(v)||v<0)){bad=true;return;}if(v!==null)out[k]=v;};
+  one('nLive','live');one('nChick','chick');one('nFeed','feed');one('nEco','eco');
+  var fu={},li={};
+  document.querySelectorAll('#nMon [data-nm]').forEach(function(e){
+    var m=e.dataset.nm.split(':'),v=numOrNull(e.value);
+    if(v!==null&&(!isFinite(v)||v<0)){bad=true;return;}
+    if(v!==null)(m[0]==='fuel'?fu:li)[m[1]]=v;
+  });
+  if(Object.keys(fu).length)out.fuel=fu;if(Object.keys(li).length)out.litter=li;
+  return {terms:out,bad:bad};
+}
+function clearTerms(){
+  ['nLive','nChick','nFeed','nEco'].forEach(function(id){var e=$(id);if(e)e.value='';});
+  var tb=$('nMon');if(tb)tb.innerHTML='';renderNMonths();
+}
+function fillTerms(t){
+  t=t||{};
+  [['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco']].forEach(function(x){var e=$(x[0]);if(e)e.value=isNum(t[x[1]])?String(t[x[1]]):'';});
+  renderNMonths();
+  ['fuel','litter'].forEach(function(f){
+    var m=t[f]||{};Object.keys(m).forEach(function(k){var e=document.querySelector('#nMon [data-nm="'+f+':'+k+'"]');if(e&&isNum(m[k]))e.value=String(m[k]);});
+  });
+}
+async function prefillTerms(){
+  if(!S.db||S.editId||!isOwner())return;
+  try{
+    var r=await S.db.collection('settle').get(),best=null;
+    r.docs.forEach(function(d){
+      var x=d.data();if(!x||!x.terms)return;
+      var oc=cycleById(d.id),sd=oc?oc.stockDate:'';
+      if(!best||sd>best.sd)best={sd:sd,t:x.terms};
+    });
+    if(!best||S.editId)return;
+    [['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco']].forEach(function(x){
+      var e=$(x[0]);if(e&&e.value===''&&isNum(best.t[x[1]]))e.value=String(best.t[x[1]]);
+    });
+  }catch(e){}
+}
+async function saveTermsFor(cid,terms){
+  var sn=await S.db.doc('settle/'+cid).get();
+  var d=sn.exists?Object.assign({},sn.data()):{};
+  d.c=cid;d.terms=terms;
+  await S.db.doc('settle/'+cid).set(d);
+}
+function renderHome(){
+  var pane=$('pane-home');
+  if(!$('homeForm')){
+    pane.innerHTML=
+      '<section class="card"><div class="cardhead"><h2>입식 선택</h2>'+
+      '<button type="button" class="btn" data-act="restore-pick">백업 파일에서 복원</button>'+
+      '<input type="file" id="restoreFile" accept=".json,application/json" hidden></div>'+
+      '<div class="cyc-list" id="cycList"></div></section><div id="bkBox"></div><section class="card" id="autoBk" hidden></section>'+
+      '<section class="card" id="homeForm"><h2 id="formTitle">새 입식 등록</h2>'+
+      '<div class="frow"><label class="nfield">입식일<input type="date" id="nDate"></label>'+
+      '<label class="nfield">총 마릿수<input type="text" id="nTotal" inputmode="numeric" autocomplete="off" placeholder="예: 25000"></label></div>'+
+      '<label class="nfield">비고(메모)<textarea class="nnote" id="nNote" maxlength="500" placeholder="예: 입식 업체, 사료 회사, 특이사항"></textarea></label>'+
+      '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
+      '<div class="memo-label" style="margin:10px 0 0">정산 단가 <span class="hint">(선택 · 정산 탭에 자동 적용, 나중에 고칠 수 있음)</span></div>'+
+      nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('사료 단가','nFeed','원/kg')+nrow('친환경 보조금','nEco','원/마리')+
+      '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 월별 단가 <span class="hint">(원/마리 · 사육일수로 가중평균)</span></div>'+
+      '<div class="scroll"><table class="tbl"><thead><tr><th>월</th><th>연료 단가</th><th>깔짚 단가</th></tr></thead><tbody id="nMon"></tbody></table></div></div>'+
+      '<div class="prev" id="nPrev" aria-live="polite"></div>'+
+      '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
+      '<p class="err" id="nErr" hidden></p>'+
+      '<div class="cyc-btns"><button type="button" class="btn primary" id="nSave" data-act="save">입식 등록</button>'+
+      '<button type="button" class="btn" id="nCancel" data-act="cancel-edit" hidden>취소</button></div></section>';
+    $('nDate').value=todayStr();renderNMonths();S.prefilled=false;
+  }
+  var ntb=$('nTermsBox');if(ntb)ntb.hidden=!isOwner();
+  if(S.db&&S.ready&&!S.prefilled&&!S.editId){S.prefilled=true;prefillTerms();}
+  fillList();refreshAutoBk(false);
+}
+function fillList(){
+  var box=$('cycList');if(!box)return;
+  if(!S.ready){box.innerHTML='<p class="hint">'+esc(S.status)+'</p>';return;}
+  if(!S.db){box.innerHTML='<p class="hint">저장소에 연결되지 않아 목록을 불러올 수 없습니다. 인터넷 연결을 확인하고 앱을 다시 열어 주세요.</p>';return;}
+  if(!S.cycles.length){box.innerHTML='<p class="hint">아직 등록된 입식이 없습니다. 아래에서 입식일과 총 마릿수를 넣어 등록하세요.</p>';return;}
+  var today=todayStr(),own=isOwner(),ro=!S.canWrite||S.stale;
+  box.innerHTML=(S.stale?'<p class="hint" style="margin:0">저장된 목록을 먼저 보여주고 있습니다. 최신 내용을 확인하는 중입니다…</p>':'')+S.cycles.map(function(c){
+    var a=ageOf(c,today),sum=HOUSES.reduce(function(x,h){return x+headsOf(c,h);},0);
+    var id=esc(c.id);
+    return '<div class="cyc-card" aria-current="'+(c.id===S.cid)+'">'+
+      '<div class="cyc-main"><b>'+dot(c.stockDate)+' 입식'+(c.id===S.cid?'<span class="badge">선택됨</span>':'')+'</b>'+
+      '<span>총 '+fmt(c.total)+'수 · 서비스 포함 '+fmt(sum)+'수 · '+(a>=1?a+'일령':'입식 전')+'</span>'+(c.note?'<span style="white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font-size:14px;margin-top:2px">'+esc(c.note)+'</span>':'')+'</div>'+
+      '<div class="cyc-btns"><button type="button" class="btn primary" data-act="open" data-cid="'+id+'">열기</button>'+
+      '<button type="button" class="btn" data-act="edit" data-cid="'+id+'"'+(ro?' disabled':'')+'>수정</button>'+
+      '<button type="button" class="btn" data-act="backup" data-cid="'+id+'">백업</button>'+
+      '<button type="button" class="btn" data-act="xl-open" data-cid="'+id+'">엑셀</button>'+
+      (own?'<button type="button" class="btn danger" data-act="askdel" data-cid="'+id+'"'+(ro?' disabled':'')+'>삭제</button>':'')+'</div>'+
+      (S.delId===c.id?'<div class="confirm"><p class="err">삭제하면 이 입식의 입력 기록이 모두 지워지고 되돌릴 수 없습니다. 먼저 백업을 받아 두세요.</p>'+
+        '<div class="cyc-btns"><button type="button" class="btn danger" data-act="deldo" data-cid="'+id+'">삭제합니다</button>'+
+        '<button type="button" class="btn" data-act="delno">취소</button></div></div>':'')+
+      '</div>';
+  }).join('');
+}
+function goHome(focus){
+  S.tab='home';render();
+  if(focus){var f=$('homeForm');if(f)f.scrollIntoView({block:'start'});var i=$('nTotal');if(i)i.focus();}
+  else window.scrollTo(0,0);
+}
+function updatePrev(){
+  var el=$('nPrev');if(!el)return;
+  var t=parseTotal();
+  if(!isFinite(t)||t<100){el.innerHTML='';return;}
+  var a=allocate(t),sum=a.reduce(function(x,y){return x+y;},0);
+  el.innerHTML=a.map(function(n,i){return '<div><span>'+(i+1)+'동</span>'+fmt(n)+'</div>';}).join('')+'<div style="grid-column:1/-1"><span>합계(서비스 포함)</span><b>'+fmt(sum)+'</b></div>';
+}
+function cancelEdit(){
+  S.editId=null;
+  if(!$('homeForm'))return;
+  $('formTitle').textContent='새 입식 등록';
+  $('nSave').textContent='입식 등록';$('nCancel').hidden=true;
+  $('nHint').textContent='동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.';
+  S.termsReady=false;
+  $('nDate').value=todayStr();$('nTotal').value='';$('nNote').value='';$('nErr').hidden=true;updatePrev();clearTerms();S.prefilled=false;if(S.db&&S.ready){S.prefilled=true;prefillTerms();}
+}
+function startEdit(cid){
+  var c=cycleById(cid);if(!c||!$('homeForm'))return;
+  S.editId=cid;
+  $('formTitle').textContent='입식 수정 · '+dot(c.stockDate);
+  $('nSave').textContent='수정 저장';$('nCancel').hidden=false;
+  $('nHint').textContent='총 마릿수를 바꾸면 동별 마릿수가 다시 계산됩니다. 이미 입력한 도태·폐사·사료·온도 기록은 그대로 유지됩니다.';
+  $('nDate').value=c.stockDate;$('nTotal').value=String(c.total);$('nNote').value=c.note||'';$('nErr').hidden=true;updatePrev();
+  S.termsReady=false;clearTerms();renderNMonths();
+  if(isOwner())S.db.doc('settle/'+cid).get().then(function(sn){
+    if(S.editId!==cid)return;
+    fillTerms(sn.exists?sn.data().terms:null);S.termsReady=true;
+  }).catch(function(){});
+  $('homeForm').scrollIntoView({block:'start'});$('nTotal').focus();
+}
+function saveCycle(){
+  var err=$('nErr'),date=$('nDate').value,t=parseTotal(),btn=$('nSave'),note=($('nNote').value||'').trim();
+  err.hidden=true;
+  if(!date){err.textContent='입식일을 선택하세요.';err.hidden=false;return;}
+  if(!isFinite(t)||t<100){err.textContent='총 마릿수를 숫자로 입력하세요. 예: 25000';err.hidden=false;return;}
+  if(!S.db){err.textContent='저장소에 연결되지 않았습니다. 인터넷 연결을 확인하세요.';err.hidden=false;return;}
+  var tr=readTerms();if(tr.bad){err.textContent='정산 단가는 0 이상의 숫자로 입력하세요.';err.hidden=false;return;}
+  if(S.editId){
+    var old=cycleById(S.editId);if(!old){cancelEdit();return;}
+    var patch={stockDate:date,note:note};
+    if(t!==Number(old.total)){var al=allocate(t),hh={};al.forEach(function(n,i){hh[i+1]=n;});patch.total=t;patch.heads=hh;}
+    btn.disabled=true;
+    var eid=S.editId,wt=S.termsReady;
+    S.db.doc('cycles/'+eid).update(patch)
+      .then(function(){return wt?saveTermsFor(eid,tr.terms):null;})
+      .then(function(){toast('수정됨');cancelEdit();})
+      .catch(function(e){err.textContent='수정하지 못했습니다. 권한을 확인하고 다시 시도하세요.';err.hidden=false;handleErr(e);})
+      .then(function(){btn.disabled=!S.canWrite;});
+    return;
+  }
+  var id=date.replace(/-/g,'')+'_'+t;
+  if(cycleById(id)){err.textContent='같은 입식일과 마릿수의 기록이 이미 있습니다.';err.hidden=false;return;}
+  var a=allocate(t),heads={};a.forEach(function(n,i){heads[i+1]=n;});
+  btn.disabled=true;
+  S.db.doc('cycles/'+id).get().then(function(sn){
+    if(sn.exists)throw {code:'dup'};
+    return S.db.doc('cycles/'+id).set({stockDate:date,total:t,heads:heads,note:note,serviceRate:SERVICE,expectedWeight:null,createdAt:Date.now()})
+      .then(function(){return isOwner()&&Object.keys(tr.terms).length?S.db.doc('settle/'+id).set({c:id,terms:tr.terms}):null;});
+  })
+    .then(function(){
+      idxAdd(id);S.ready=true;
+      $('nTotal').value='';$('nNote').value='';updatePrev();clearTerms();S.prefilled=false;S.date=date>todayStr()?date:todayStr();
+      if(!cycleById(id)){S.cycles.unshift({id:id,stockDate:date,total:t,heads:heads,note:note});}
+      S.tab='input';selectCycle(id);window.scrollTo(0,0);toast('입식 등록됨');
+    })
+    .catch(function(e){
+      if(e&&e.code==='dup'){err.textContent='같은 입식일과 마릿수의 입식이 이미 등록되어 있습니다. 목록에서 선택하세요.';err.hidden=false;return;}
+      err.textContent='등록하지 못했습니다. 권한을 확인하고 다시 시도하세요.';err.hidden=false;handleErr(e);
+    })
+    .then(function(){btn.disabled=!S.canWrite;});
+}
+async function runChunks(items,fn,size,onProg){
+  for(var i=0;i<items.length;i+=size){
+    await Promise.all(items.slice(i,i+size).map(fn));
+    if(onProg)onProg(Math.min(i+size,items.length),items.length);
+  }
+}
+async function deleteCycle(cid){
+  if(!cid||!S.db)return;
+  try{
+    toast('삭제하는 중…');
+    var r=await Promise.all([S.db.collection('entries').where('c','==',cid).get(),S.db.collection('days').where('c','==',cid).get()]);
+    await runChunks(r[0].docs,function(d){return S.db.doc('entries/'+d.id).delete();},8);
+    await runChunks(r[1].docs,function(d){return S.db.doc('days/'+d.id).delete();},8);
+    try{await S.db.doc('settle/'+cid).delete();}catch(e){}
+    await S.db.doc('cycles/'+cid).delete();
+    idxDel(cid);
+    S.delId=null;
+    if(cid===S.cid){lsSet('wl-cid','');S.cycles=S.cycles.filter(function(c){return c.id!==cid;});selectCycle(S.cycles.length?S.cycles[0].id:null);}
+    toast('삭제됨');
+  }catch(e){handleErr(e);}
+  render();
+}
+/* 출하 백업: 출하 마릿수·중량이 입력되면 그 시점에 한 번만 저장소에 파일로 남긴다 (예전 일령별 백업은 있으면 목록에만 표시) */
+var BK_AGES=[7,14,21,28,35,42];
+function bkDate(c,age){return isoDay(dayNum(c.stockDate)+age-1);}
+function bkJson(c,asOf){
+  var cy=Object.assign({},c);delete cy.id;cy.id=c.id;
+  var ents=[],days=[];
+  S.entries.forEach(function(d,id){if(d&&String(d.d)<=asOf)ents.push({id:id,data:Object.assign({},d)});});
+  S.days.forEach(function(d,id){if(d&&String(d.d)<=asOf)days.push({id:id,data:Object.assign({},d)});});
+  return JSON.stringify({app:'duck-worklog',version:1,exportedAt:new Date().toISOString(),asOf:asOf,cycle:cy,settle:S.settle||null,entries:ents,days:days},null,1);
+}
+var abBusy=false,abAt=0;
+async function refreshAutoBk(force){
+  var box=$('autoBk');if(!box)return;
+  var c=cyc();
+  if(!c||!S.db){box.hidden=true;return;}
+  if(!force&&Date.now()-abAt<20000)return;
+  if(abBusy)return;abBusy=true;abAt=Date.now();
+  try{
+    var cid=c.id;
+    var rows=await Promise.all(['ship'].concat(BK_AGES).map(async function(k){
+      var st='none',asOf='';
+      try{var sn=await withTimeout(S.db.doc('backups/'+cid+'_'+k).get(),6000);if(sn!==TO&&sn.exists){st='ok';asOf=sn.data().asOf||'';}}catch(e){}
+      return {k:k,st:st,asOf:asOf};
+    }));
+    if(cid!==S.cid)return;
+    rows=rows.filter(function(r){return r.k==='ship'||r.st==='ok';});
+    box.hidden=false;
+    box.innerHTML='<h2>출하 백업 · '+dot(c.stockDate)+' 입식</h2>'+
+      '<p class="hint">정산 탭에 출하 마릿수와 출하 중량을 넣으면 그 순간 이 입식의 전체 기록이 한 번만 자동으로 저장됩니다. 받은 파일은 위의 \'백업 파일에서 복원\'으로 되돌릴 수 있습니다.</p>'+
+      rows.map(function(r){
+        var right=r.st==='ok'?'<button type="button" class="btn" data-act="abdl" data-cid="'+esc(cid)+'" data-age="'+r.k+'">받기</button>':'<span class="hint">출하 정보를 넣으면 만들어짐</span>';
+        var ttl=r.k==='ship'?'출하 백업':r.k+'일령 백업(이전 방식)';
+        var sub=r.st==='ok'?(r.asOf?dot(r.asOf)+' 기준':''):'';
+        return '<div class="cyc-card"><div class="cyc-main"><b>'+ttl+'</b>'+(sub?'<span>'+sub+'</span>':'')+'</div><div class="cyc-btns">'+right+'</div></div>';
+      }).join('');
+  }finally{abBusy=false;}
+}
+async function downloadAutoBk(cid,age){
+  var c=cycleById(cid);if(!c||!S.db)return;
+  try{
+    var sn=await S.db.doc('backups/'+cid+'_'+age).get();
+    if(!sn.exists){toast('백업이 없습니다');return;}
+    var json=sn.data().json,name='worklog_'+c.stockDate+'_'+(age==='ship'?'출하':age+'일령')+'.json';
+    if(S.dl){
+      try{await S.dl.save({filename:name,data:json});toast('백업 파일을 저장했습니다');return;}
+      catch(e){if(e&&e.code==='declined')return;}
+    }
+    showBackupBox(json);
+  }catch(e){handleErr(e);}
+}
+/* 백업: 입식 하나의 기록 전체를 JSON 파일로 저장 */
+async function backupCycle(cid){
+  var c=cycleById(cid);if(!c||!S.db)return;
+  try{
+    toast('백업 파일 만드는 중…');
+    var r=await Promise.all([S.db.collection('entries').where('c','==',cid).get(),S.db.collection('days').where('c','==',cid).get()]);
+    var sdn=null;try{var sdd=await S.db.doc('settle/'+cid).get();if(sdd.exists)sdn=Object.assign({},sdd.data());}catch(e){}
+    var cy=Object.assign({},c);delete cy.id;cy.id=cid;
+    var out={app:'duck-worklog',version:1,exportedAt:new Date().toISOString(),cycle:cy,settle:sdn,
+      entries:r[0].docs.map(function(d){return {id:d.id,data:d.data()};}),
+      days:r[1].docs.map(function(d){return {id:d.id,data:d.data()};})};
+    var json=JSON.stringify(out,null,1);
+    var name='worklog_'+c.stockDate+'.json';
+    if(S.dl){
+      try{await S.dl.save({filename:name,data:json});toast('백업 파일을 저장했습니다');return;}
+      catch(e){if(e&&e.code==='declined')return;}
+    }
+    showBackupBox(json);
+  }catch(e){handleErr(e);}
+}
+function showBackupBox(json){
+  var box=$('bkBox');if(!box)return;
+  box.innerHTML='<section class="card"><div class="cardhead"><h2>백업 내용</h2><button type="button" class="btn" data-act="bkclose">닫기</button></div>'+
+    '<p class="hint">파일로 저장되지 않았습니다. 아래 내용을 전체 복사해 메모 앱 등에 보관하고, 파일(.json)로 저장해 두면 나중에 복원할 수 있습니다.</p>'+
+    '<textarea class="bk" id="bkText" readonly aria-label="백업 내용"></textarea>'+
+    '<button type="button" class="btn primary" data-act="bkcopy">전체 복사</button></section>';
+  $('bkText').value=json;box.scrollIntoView({block:'nearest'});
+}
+/* 복원 */
+var ID_RE=/^[A-Za-z0-9_\-.~:@+]{1,200}$/;
+function readFile(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(String(r.result));};r.onerror=function(){rej(r.error);};r.readAsText(file);});}
+async function pickRestore(file){
+  var box=$('bkBox');if(!box||!file)return;
+  try{
+    var obj=JSON.parse(await readFile(file));
+    var cy=obj&&obj.cycle;
+    if(!obj||obj.app!=='duck-worklog'||!cy||!ID_RE.test(String(cy.id))||!/^\d{4}-\d{2}-\d{2}$/.test(String(cy.stockDate))||!cy.heads||!Array.isArray(obj.entries)||!Array.isArray(obj.days))throw new Error('bad');
+    S.restore=obj;
+    box.innerHTML='<section class="card"><h2>복원할까요?</h2><p>'+dot(cy.stockDate)+' 입식 · 총 '+fmt(cy.total)+'수 · 입력 기록 '+fmt(obj.entries.length)+'건 · 일별 온도·비고 '+fmt(obj.days.length)+'건</p>'+
+      '<p class="hint">같은 입식이 이미 있으면 백업 내용으로 덮어씁니다. 백업 이후에 새로 입력한 기록은 그대로 남습니다.</p>'+
+      '<div class="cyc-btns"><button type="button" class="btn primary" data-act="restore-go">복원</button><button type="button" class="btn" data-act="restore-cancel">취소</button></div></section>';
+  }catch(e){
+    S.restore=null;
+    box.innerHTML='<section class="card"><p class="err">작업일지 백업 파일이 아닙니다. 백업 버튼으로 받은 .json 파일을 선택하세요.</p><button type="button" class="btn" data-act="restore-cancel">닫기</button></section>';
+  }
+}
+async function doRestore(){
+  var obj=S.restore;if(!obj||!S.db)return;
+  var cid=obj.cycle.id,box=$('bkBox');
+  var cdata=Object.assign({},obj.cycle);delete cdata.id;
+  var ents=obj.entries.filter(function(e){return e&&ID_RE.test(String(e.id))&&e.data&&typeof e.data==='object';});
+  var days=obj.days.filter(function(e){return e&&ID_RE.test(String(e.id))&&e.data&&typeof e.data==='object';});
+  try{
+    box.innerHTML='<section class="card"><p id="rProg">복원하는 중… 0%</p></section>';
+    await S.db.doc('cycles/'+cid).set(cdata);
+    idxAdd(cid);
+    if(obj.settle&&typeof obj.settle==='object'){var sd0=Object.assign({},obj.settle);sd0.c=cid;await S.db.doc('settle/'+cid).set(sd0);}
+    var total=ents.length+days.length,done=0;
+    var prog=function(n){done=n;var el=$('rProg');if(el)el.textContent='복원하는 중… '+Math.round(done/Math.max(total,1)*100)+'%';};
+    await runChunks(ents,function(e){var d=Object.assign({},e.data);d.c=cid;return S.db.doc('entries/'+e.id).set(d);},8,function(n){prog(n);});
+    await runChunks(days,function(e){var d=Object.assign({},e.data);d.c=cid;return S.db.doc('days/'+e.id).set(d);},8,function(n){prog(ents.length+n);});
+    S.restore=null;box.innerHTML='';
+    if(!cycleById(cid)){var o=Object.assign({},cdata);o.id=cid;S.cycles.unshift(o);}
+    selectCycle(cid);toast('복원됨');
+  }catch(e){
+    box.innerHTML='<section class="card"><p class="err">복원하지 못했습니다. 일부만 복원됐을 수 있으니 같은 파일로 다시 시도하세요.</p><button type="button" class="btn" data-act="restore-cancel">닫기</button></section>';
+    handleErr(e);
+  }
+}
+
+
+/* ---------- 정산 ---------- */
+var MAXAGE=49;
+function maxDateOf(c){return addDays(c.stockDate,MAXAGE-1);}
+function overAge(){var c=cyc();return !!(c&&ageOf(c,S.date)>MAXAGE);}
+function nz(v){return isNum(v)?v:0;}
+function numOrNull(v){var r=String(v==null?'':v).trim().replace(/,/g,'');if(r==='')return null;var n=Number(r);return isFinite(n)?n:NaN;}
+function won(x){return fmt(Math.round(x))+'원';}
+function sdoc(){return S.settle||{};}
+function monthKeys(c){
+  var out=[],end=maxDateOf(c),cur=c.stockDate.slice(0,7);
+  for(var i=0;i<4;i++){
+    out.push(cur);
+    var y=Number(cur.slice(0,4)),m=Number(cur.slice(5,7))+1;if(m>12){m=1;y++;}
+    var nx=y+'-'+p2(m);if(nx+'-01'>end)break;cur=nx;
+  }
+  return out;
+}
+function dimOf(mk){return new Date(Date.UTC(Number(mk.slice(0,4)),Number(mk.slice(5,7)),0)).getUTCDate();}
+function periodDaysIn(mk,c,endDate){
+  if(!endDate)return 0;
+  var dim=dimOf(mk),a=c.stockDate>mk+'-01'?c.stockDate:mk+'-01',z=endDate<mk+'-'+p2(dim)?endDate:mk+'-'+p2(dim);
+  var n=dayNum(z)-dayNum(a)+1;return n>0?n:0;
+}
+function calcSettle(c){
+  var d=sdoc(),sh=d.ship||{},tm=d.terms||{},r={};
+  var ws=(Array.isArray(sh.weights)?sh.weights:[]).filter(isNum);
+  r.W=ws.reduce(function(x,y){return x+y;},0);r.nVeh=ws.length;
+  r.heads=isNum(sh.heads)&&sh.heads>0?sh.heads:null;
+  r.shipDate=/^\d{4}-\d{2}-\d{2}$/.test(sh.date||'')&&sh.date>=c.stockDate?sh.date:null;
+  r.age=r.shipDate?ageOf(c,r.shipDate):null;
+  var A=agg(),feed=0;HOUSES.forEach(function(h){feed+=A.tot[h].feed;});
+  r.feed=feed;r.total=Number(c.total)||0;
+  r.surv=(r.heads&&r.total>0)?r.heads/r.total*100:null;
+  r.avgW=(r.heads&&r.W>0)?r.W/r.heads:null;
+  r.fph=r.heads?feed/r.heads:null;
+  r.fcr=r.W>0?feed/r.W:null;
+  r.live=r.W*nz(tm.live);
+  r.eco=nz(tm.eco)*(r.heads||0);
+  r.months=monthKeys(c).map(function(mk){
+    var dim=dimOf(mk),days=periodDaysIn(mk,c,r.shipDate);
+    var fa=nz(tm.fuel&&tm.fuel[mk]),la=nz(tm.litter&&tm.litter[mk]);
+    return {mk:mk,dim:dim,days:days,fa:fa,la:la,fp:0,lp:0};
+  });
+  r.pdays=r.months.reduce(function(x,m){return x+m.days;},0);
+  r.months.forEach(function(m){m.fp=r.pdays>0?m.fa*m.days/r.pdays:0;m.lp=r.pdays>0?m.la*m.days/r.pdays:0;});
+  r.fuelU=r.months.reduce(function(x,m){return x+m.fp;},0);
+  r.litterU=r.months.reduce(function(x,m){return x+m.lp;},0);
+  r.fuel=r.fuelU*(r.heads||0);
+  r.litter=r.litterU*(r.heads||0);
+  r.income=r.live+r.eco+r.fuel+r.litter;
+  r.chick=r.total*nz(tm.chick);
+  r.feedCost=feed*nz(tm.feed);
+  var etc=Array.isArray(d.etc)?d.etc:[];
+  r.etc=etc.reduce(function(x,e){return x+nz(e&&e.amt);},0);
+  r.cost=r.chick+r.feedCost+r.etc;
+  r.net=r.income-r.cost;
+  return r;
+}
+var settleChain=Promise.resolve();
+function shipReady(d){
+  var sh=d&&d.ship;if(!sh)return false;
+  var w=(Array.isArray(sh.weights)?sh.weights:[]).filter(isNum).reduce(function(x,y){return x+y;},0);
+  return isNum(sh.heads)&&sh.heads>0&&w>0;
+}
+function saveSettle(fn){
+  if(!S.db||!S.cid||!S.canWrite)return;
+  var cid=S.cid,doc=JSON.parse(JSON.stringify(S.settle||{}));doc.c=cid;
+  fn(doc);S.settle=doc;
+  var c0=cyc(),mk=false;
+  if(c0&&c0.id===cid&&!doc.shipBackedUp&&S.sync.e&&S.sync.d&&shipReady(doc)){doc.shipBackedUp=Date.now();mk=true;}
+  settleChain=settleChain.then(function(){
+    if(!mk)return;
+    return S.db.doc('backups/'+cid+'_ship').set({c:cid,age:'ship',asOf:(doc.ship&&doc.ship.date)||todayStr(),createdAt:Date.now(),json:bkJson(c0,'9999-12-31')})
+      .then(function(){toast('출하 백업을 만들었습니다');refreshAutoBk(true);})
+      .catch(function(e){delete doc.shipBackedUp;handleErr(e);});
+  }).then(function(){return S.db.doc('settle/'+cid).set(doc);})
+    .then(function(){toast('저장됨');}).catch(function(e){handleErr(e);});
+  refreshSettle();
+}
+function stKeyOf(c){
+  var d=sdoc(),ws=(d.ship&&Array.isArray(d.ship.weights))?d.ship.weights.length:0,ne=Array.isArray(d.etc)?d.etc.length:0;
+  return c.id+'|'+ws+'|'+ne+'|'+monthKeys(c).join(',');
+}
+function mf(label,sk,unit,ph){
+  return '<label class="sd-row"><span>'+label+(unit?'<span class="s">'+unit+'</span>':'')+'</span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" data-sk="'+sk+'" placeholder="'+(ph||'0')+'" aria-label="'+label+'"></label>';
+}
+function settleFormHTML(c){
+  var d=sdoc(),sh=d.ship||{},ws=Array.isArray(sh.weights)?sh.weights:[],etc=Array.isArray(d.etc)?d.etc:[],mk=monthKeys(c);
+  var veh=ws.map(function(w,i){
+    return '<div class="vrow"><span>차량 '+(i+1)+'</span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" data-sk="w:'+i+'" placeholder="중량" aria-label="차량 '+(i+1)+' 중량 kg"><span class="u">kg</span><button type="button" class="btn" data-act="sv-del" data-i="'+i+'">삭제</button></div>';
+  }).join('');
+  var er=etc.map(function(e,i){
+    return '<div class="erow"><input class="sfld" type="text" autocomplete="off" maxlength="80" data-sk="em:'+i+'" placeholder="항목·메모" aria-label="기타비용 '+(i+1)+' 메모"><input class="sfld" type="text" inputmode="decimal" autocomplete="off" data-sk="ea:'+i+'" placeholder="금액(원)" aria-label="기타비용 '+(i+1)+' 금액"><button type="button" class="btn" data-act="se-del" data-i="'+i+'">삭제</button></div>';
+  }).join('');
+  var mrows=mk.map(function(k){
+    return '<tr><td>'+Number(k.slice(5,7))+'월<small>'+dimOf(k)+'일</small></td><td id="smd-'+k+'">–</td>'+
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-sk="fuel:'+k+'" placeholder="0" aria-label="'+k+' 연료 보조금 단가"></td>'+
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-sk="litter:'+k+'" placeholder="0" aria-label="'+k+' 깔짚 보조금 단가"></td>'+
+      '<td id="smp-'+k+'">–</td></tr>';
+  }).join('');
+  return '<div id="sdForm" class="pane" style="gap:14px">'+
+    '<section class="card"><h2>출하 정보</h2>'+
+    '<p class="hint">출하 후 실제 결과를 넣으세요. 입식 마릿수는 입식 탭에 등록한 값(서류 기준)을 사용합니다.</p>'+
+    '<label class="sd-row"><span>출하일<span class="s">여러 날이면 마지막 날</span></span><input class="sfld" type="date" data-sk="ship.date" aria-label="출하일" style="text-align:left"></label>'+
+    mf('출하 마릿수','ship.heads','마리 · 실제','0')+
+    '<div class="memo-label" style="margin:4px 0 0">출하 중량 (생체 운반 차량별)</div>'+veh+
+    '<div class="cyc-btns"><button type="button" class="btn" data-act="sv-add">+ 차량 추가</button></div>'+
+    '<p class="hint" id="sdWsum"></p></section>'+
+    '<section class="card"><h2>출하 성적</h2><div class="kpis" id="sdPerf"></div></section>'+
+    '<section class="card"><div class="cardhead"><h2>계약 조건 (단가)</h2><button type="button" class="btn" data-act="st-copy">이전 입식 단가 복사</button></div>'+
+    '<p class="hint">회사마다 다른 계약 조건을 이 입식에 맞게 넣으세요. 정산서가 바로 다시 계산됩니다.</p>'+
+    mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('사료 단가','terms.feed','원/kg')+
+    mf('친환경 보조금','terms.eco','원/마리')+
+    '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 (월별 단가 원/마리 · 사육일수로 가중평균)</div>'+
+    '<div class="scroll"><table class="tbl mon"><thead><tr><th>월</th><th>기간 중 일수</th><th>연료 단가</th><th>깔짚 단가</th><th>반영 단가(연료+깔짚)</th></tr></thead><tbody>'+mrows+'</tbody></table></div>'+
+    '<p class="hint">적용 단가 = Σ (월 단가 × 사육기간 중 그 달에 든 일수) ÷ 사육기간 전체 일수. 사육기간은 입식일부터 출하일까지, 두 날짜 모두 포함합니다. 보조금 = 적용 단가 × 출하 마릿수.</p>'+
+    '<div class="memo-label" style="margin:6px 0 0">기타 비용</div>'+er+
+    '<div class="cyc-btns"><button type="button" class="btn" data-act="se-add">+ 기타 비용 추가</button></div></section>'+
+    '<section class="card"><h2>예상 정산서</h2><div id="sdStmt"></div></section></div>';
+}
+function setSf(el,v){
+  if(!el||document.activeElement===el)return;
+  var s=(v==null||(typeof v==='number'&&!isFinite(v)))?'':String(v);if(el.value!==s)el.value=s;
+}
+function refreshSettle(){
+  if(S.tab!=='settle')return;
+  var c=cyc();if(!c||!S.ready)return;
+  if(!$('sdForm')||S.stKey!==stKeyOf(c)){renderSettle();return;}
+  var d=sdoc(),sh=d.ship||{},tm=d.terms||{},ws=Array.isArray(sh.weights)?sh.weights:[],etc=Array.isArray(d.etc)?d.etc:[];
+  var q=function(k){return document.querySelector('#sdForm [data-sk="'+k+'"]');};
+  setSf(q('ship.date'),sh.date||'');setSf(q('ship.heads'),sh.heads);
+  ws.forEach(function(w,i){setSf(q('w:'+i),w);});
+  ['live','chick','feed','eco'].forEach(function(k){setSf(q('terms.'+k),tm[k]);});
+  monthKeys(c).forEach(function(k){setSf(q('fuel:'+k),tm.fuel&&tm.fuel[k]);setSf(q('litter:'+k),tm.litter&&tm.litter[k]);});
+  etc.forEach(function(e,i){setSf(q('em:'+i),e&&e.memo);setSf(q('ea:'+i),e&&e.amt);});
+  var r=calcSettle(c);
+  $('sdWsum').textContent='차량 '+r.nVeh+'대 · 합계 '+fmtN(r.W)+' kg'+(r.heads&&r.W>0?' · 평균 출하 체중 '+(r.W/r.heads).toFixed(2)+' kg':'');
+  var kp=function(l,v,sm){return '<div class="kpi"><span>'+l+'</span><b>'+v+'</b>'+(sm?'<small>'+sm+'</small>':'')+'</div>';};
+  var dash='–';
+  $('sdPerf').innerHTML=
+    kp('출하 일령',r.age!=null?r.age+'<small> 일령</small>':dash,r.shipDate?dot(r.shipDate)+' 출하':'출하일을 입력하세요')+
+    kp('육성율',r.surv!=null?r.surv.toFixed(2)+'<small> %</small>':dash,r.surv!=null?'출하 '+fmt(r.heads)+' ÷ 입식 '+fmt(r.total)+'(서류)':'출하 마릿수를 입력하세요')+
+    kp('출하 마릿수',r.heads?fmt(r.heads):dash,r.heads?'입식 대비 '+fmt(r.heads-r.total)+'수':'')+
+    kp('출하 중량',r.W>0?fmtN(r.W)+'<small> kg</small>':dash,r.avgW?'평균 '+r.avgW.toFixed(2)+' kg/마리':'')+
+    kp('총 사료 입고',fmtN(r.feed)+'<small> kg</small>','입력 탭의 사료 입고 누계')+
+    kp('출하 마리당 사료',r.fph!=null?r.fph.toFixed(2)+'<small> kg</small>':dash,'총 사료 ÷ 출하 마릿수')+
+    kp('사료요구율',r.fcr!=null?r.fcr.toFixed(3):dash,'총 사료 ÷ 출하 중량');
+  r.months.forEach(function(m){
+    var a=$('smd-'+m.mk),b=$('smp-'+m.mk);
+    if(a)a.textContent=r.shipDate?m.days+'일':'–';
+    if(b)b.textContent=r.shipDate?(m.fp+m.lp).toFixed(2)+'원':'–';
+  });
+  var row=function(l,sm,v,cls){return '<tr'+(cls?' class="'+cls+'"':'')+'><td>'+l+(sm?'<small>'+sm+'</small>':'')+'</td><td>'+v+'</td></tr>';};
+  var ecoTxt=fmt(r.heads||0)+'마리 × '+fmt(nz(tm.eco))+'원';
+  var etcRows=etc.filter(function(e){return e&&(isNum(e.amt)||e.memo);}).map(function(e){return row('기타 · '+esc(e.memo||'(메모 없음)'),'',won(nz(e.amt)));}).join('');
+  $('sdStmt').innerHTML='<div class="scroll"><table class="tbl stmt"><tbody>'+
+    row('매출 (수입)','','','sec')+
+    row('생체 대금',fmtN(r.W)+' kg × '+fmt(nz(tm.live))+'원',won(r.live))+
+    row('친환경 보조금',ecoTxt,won(r.eco))+
+    row('연료 보조금',r.shipDate?'적용 단가 '+r.fuelU.toFixed(2)+'원 × '+fmt(r.heads||0)+'마리':'출하일 입력 후 계산',won(r.fuel))+
+    row('깔짚 보조금',r.shipDate?'적용 단가 '+r.litterU.toFixed(2)+'원 × '+fmt(r.heads||0)+'마리':'출하일 입력 후 계산',won(r.litter))+
+    row('수입 합계','',won(r.income),'tot')+
+    row('매입 (지출)','','','sec')+
+    row('병아리 대금',fmt(r.total)+'마리(서류) × '+fmt(nz(tm.chick))+'원',won(r.chick))+
+    row('사료 대금',fmtN(r.feed)+' kg × '+fmt(nz(tm.feed))+'원',won(r.feedCost))+
+    (etcRows||row('기타 비용','',won(0)))+
+    row('지출 합계','',won(r.cost),'tot')+
+    row('예상 정산액','수입 합계 − 지출 합계',(r.net<0?'−':'')+won(Math.abs(r.net)),'net')+
+    (r.heads?row('출하 마리당','',(r.net<0?'−':'')+won(Math.abs(r.net/r.heads))):'')+
+    (r.W>0?row('생체 kg당','',(r.net<0?'−':'')+won(Math.abs(r.net/r.W))):'')+
+    '</tbody></table></div>'+
+    '<p class="hint">병아리 대금은 서류상 입식 마릿수 기준입니다. 사료 대금은 입고한 사료 전체를 기준으로 하며 남은 사료는 반영하지 않습니다. 예상치이므로 실제 정산서와 다를 수 있습니다.</p>';
+  var ro=!S.canWrite;
+  document.querySelectorAll('#sdForm input,#sdForm select,#sdForm button').forEach(function(e){e.disabled=ro;});
+}
+function renderSettle(){
+  var pane=$('pane-settle'),c=cyc();
+  if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);S.stKey=null;return;}
+  pane.innerHTML='<h2 style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">정산 · '+dot(c.stockDate)+' 입식</h2>'+settleFormHTML(c);
+  S.stKey=stKeyOf(c);
+  refreshSettle();
+}
+function settleChange(t){
+  var k=t.dataset.sk||'',v=t.value,m;
+  var num=function(){var n=numOrNull(v);if(n!==null&&(!isFinite(n)||n<0)){toast('숫자로 입력하세요');refreshSettle();return {bad:true};}return {v:n};};
+  if(k==='ship.date'){saveSettle(function(d){d.ship=d.ship||{};d.ship.date=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';});return;}
+  if(k==='ship.heads'){var a=num();if(a.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.heads=a.v;});return;}
+  if(/^terms\.(live|chick|feed|eco)$/.test(k)){var f=k.slice(6),b=num();if(b.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[f]=b.v;});return;}
+  if((m=k.match(/^w:(\d+)$/))){var i=Number(m[1]),c2=num();if(c2.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.weights=d.ship.weights||[];d.ship.weights[i]=c2.v;});return;}
+  if((m=k.match(/^(fuel|litter):(\d{4}-\d{2})$/))){var kind=m[1],mk=m[2],e=num();if(e.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[kind]=d.terms[kind]||{};d.terms[kind][mk]=e.v;});return;}
+  if((m=k.match(/^em:(\d+)$/))){var j=Number(m[1]);saveSettle(function(d){d.etc=d.etc||[];d.etc[j]=Object.assign({},d.etc[j]||{},{memo:v.trim()});});return;}
+  if((m=k.match(/^ea:(\d+)$/))){var j2=Number(m[1]),g=numOrNull(v);if(isNaN(g)){toast('금액을 숫자로 입력하세요');refreshSettle();return;}saveSettle(function(d){d.etc=d.etc||[];d.etc[j2]=Object.assign({},d.etc[j2]||{},{amt:g});});return;}
+}
+async function copyTerms(){
+  var c=cyc();if(!c||!S.db||!S.canWrite)return;
+  try{
+    var r=await S.db.collection('settle').get(),best=null;
+    r.docs.forEach(function(d){
+      var x=d.data();if(d.id===c.id||!x||!x.terms)return;
+      var oc=cycleById(d.id),sd=oc?oc.stockDate:'';
+      if(!best||sd>best.sd)best={sd:sd,t:x.terms};
+    });
+    if(!best){toast('복사할 다른 입식의 단가가 없습니다');return;}
+    saveSettle(function(d){var t=Object.assign({},d.terms||{});['live','chick','feed','eco'].forEach(function(k){if(best.t[k]!==undefined)t[k]=best.t[k];});d.terms=t;});
+    toast('이전 입식의 단가를 복사했습니다 (월별 보조금은 제외)');
+  }catch(e){handleErr(e);}
+}
+
+/* ---------- 센서 탭: 설정 + 온도 파일 불러오기 ---------- */
+var DEF_WIN={m:[3,6],n:[12,15],e:[19,22]};
+var WLAB={m:'아침',n:'점심',e:'저녁'};
+var WKEY={m:'tm',n:'tn',e:'te'};
+var HKEY={m:'hm',n:'hn',e:'he'};
+var SENS_PER={1:2,2:2,3:2,4:2,5:1,0:1};
+function hl(h){return h===0?'외부':h+'동';}
+function normId(v){return String(v==null?'':v).toUpperCase().replace(/[^0-9A-Z]/g,'');}
+function p2(n){n=String(n);return n.length<2?'0'+n:n;}
+function settingsNow(){
+  var st=S.settings||{},sens={},win={};
+  [0,1,2,3,4,5].forEach(function(h){
+    var a=st.sensors&&st.sensors[h];
+    sens[h]=(Array.isArray(a)?a:[]).map(normId).filter(Boolean);
+  });
+  ['m','n','e'].forEach(function(k){
+    var w=st.windows&&st.windows[k];
+    win[k]=(Array.isArray(w)&&w.length===2&&isFinite(w[0])&&isFinite(w[1])&&Number(w[1])>Number(w[0]))?[Number(w[0]),Number(w[1])]:DEF_WIN[k].slice();
+  });
+  return {sens:sens,win:win};
+}
+function renderSensor(){
+  var pane=$('pane-sensor');
+  if(!$('sensorPane')){
+    var rows=[1,2,3,4,5,0].map(function(h){
+      var n=SENS_PER[h],ins='';
+      for(var i=0;i<n;i++){ins+='<input class="sin" type="text" autocomplete="off" spellcheck="false" placeholder="센서 번호 '+(i+1)+'" aria-label="'+hl(h)+' 센서 '+(i+1)+' 번호" data-sh="'+h+'" data-si="'+i+'">';}
+      return '<div class="srow"><b>'+hl(h)+'</b>'+ins+(n<2?'<span></span>':'')+'</div>';
+    }).join('');
+    var wrows=['m','n','e'].map(function(k){
+      return '<div class="wrow"><b>'+WLAB[k]+'</b><input class="win" type="text" inputmode="numeric" autocomplete="off" data-wk="'+k+'" data-wi="0" aria-label="'+WLAB[k]+' 시작 시각"><span>시 ~</span>'+
+        '<input class="win" type="text" inputmode="numeric" autocomplete="off" data-wk="'+k+'" data-wi="1" aria-label="'+WLAB[k]+' 끝 시각"><span>시</span></div>';
+    }).join('');
+    pane.innerHTML=
+      '<section class="card"><h2>센서 온도·습도 불러오기</h2>'+
+      '<p class="hint">센서 앱에서 내보낸 엑셀 파일(.xls)을 올리면 날짜별 아침·점심·저녁 온도와 습도 평균을 계산해 동별 온도·습도 칸에 넣습니다. 동 하나에 센서가 여러 개면 값을 합쳐 평균합니다. 여러 파일을 한꺼번에 선택할 수 있습니다.</p>'+
+      '<div class="cyc-btns"><button type="button" class="btn primary" data-act="imp-pick">파일 선택</button></div>'+
+      '<input type="file" id="impFile" multiple accept=".xls,.xlsx,.csv" hidden><div id="impOut"></div></section>'+
+      '<section class="card" id="sensorPane"><h2>센서 번호</h2>'+
+      '<p class="hint">번호는 내보낸 파일 이름 맨 앞의 12자리입니다. 예: F0C69E4D115A. 외부는 축사 밖 온도 센서입니다. 센서를 교체하면 해당 칸의 번호를 새 번호로 바꾸세요. 바꾸는 즉시 저장됩니다.</p>'+rows+'</section>'+
+      '<section class="card"><h2>평균 시간대</h2>'+
+      '<p class="hint">시작 시각 이상, 끝 시각 미만의 값을 평균합니다. 예: 3 ~ 6은 03:00부터 05:59까지입니다.</p>'+wrows+
+      '<p class="err" id="sErr" hidden></p></section>';
+    S.imp=S.imp||null;
+  }
+  refreshSensor();renderImp();
+}
+function refreshSensor(){
+  if(!$('sensorPane'))return;
+  var st=settingsNow(),ro=!S.canWrite;
+  [0,1,2,3,4,5].forEach(function(h){
+    document.querySelectorAll('#sensorPane [data-sh="'+h+'"]').forEach(function(i){
+      setVal(i,st.sens[h][Number(i.dataset.si)]||'');i.disabled=ro;
+    });
+  });
+  document.querySelectorAll('#pane-sensor .win').forEach(function(i){
+    setVal(i,st.win[i.dataset.wk][Number(i.dataset.wi)]);i.disabled=ro;
+  });
+}
+function saveSettings(){
+  var err=$('sErr');err.hidden=true;
+  if(!S.db||!S.canWrite){return;}
+  var sens={},win={},seen={},msg=null;
+  [0,1,2,3,4,5].forEach(function(h){
+    var arr=[];
+    document.querySelectorAll('#sensorPane [data-sh="'+h+'"]').forEach(function(i){
+      var id=normId(i.value);arr.push(id);
+      if(id){if(seen[id]&&!msg)msg='같은 센서 번호('+id+')가 두 곳에 입력되어 있습니다.';seen[id]=h;}
+    });
+    sens[h]=arr;
+  });
+  ['m','n','e'].forEach(function(k){
+    var ins=document.querySelectorAll('#pane-sensor .win[data-wk="'+k+'"]');
+    var a=Number(String(ins[0].value).trim()),b=Number(String(ins[1].value).trim());
+    if(!(Number.isInteger(a)&&Number.isInteger(b)&&a>=0&&b<=24&&b>a)){if(!msg)msg=WLAB[k]+' 시간대는 0~24 사이 정수이고 끝 시각이 시작 시각보다 커야 합니다.';}
+    win[k]=[a,b];
+  });
+  if(msg){err.textContent=msg;err.hidden=false;return;}
+  S.settings={sensors:sens,windows:win};
+  S.db.doc('settings/main').set({sensors:sens,windows:win,updatedAt:Date.now()})
+    .then(function(){toast('설정 저장됨');refreshSensor();renderImp();})
+    .catch(handleErr);
+}
+/* 파일 읽기 */
+function readBuf(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result);};r.onerror=function(){rej(r.error);};r.readAsArrayBuffer(file);});}
+function parseTs(x){
+  if(typeof x==='number'&&typeof XLSX!=='undefined'&&XLSX.SSF){
+    var o=XLSX.SSF.parse_date_code(x);if(!o)return null;
+    return {d:o.y+'-'+p2(o.m)+'-'+p2(o.d),m:o.H*60+o.M};
+  }
+  var m=String(x==null?'':x).match(/^\s*(\d{4})[\/.-](\d{1,2})[\/.-](\d{1,2})[ T]+(\d{1,2}):(\d{2})/);
+  if(!m)return null;
+  return {d:m[1]+'-'+p2(m[2])+'-'+p2(m[3]),m:Number(m[4])*60+Number(m[5])};
+}
+function parseSheet(buf){
+  if(typeof XLSX==='undefined')throw new Error('nolib');
+  var wb=XLSX.read(buf,{type:'array'});
+  var ws=wb.Sheets[wb.SheetNames[0]];
+  var rows=XLSX.utils.sheet_to_json(ws,{header:1,raw:true,defval:null});
+  var out=[];
+  rows.forEach(function(r){
+    var t=parseTs(r[0]);if(!t)return;
+    if(r[1]===null||r[1]==='')return;
+    var v=Number(r[1]);if(!isFinite(v))return;
+    var hv=(r[2]===null||r[2]===''||r[2]===undefined)?null:Number(r[2]);
+    if(hv!==null&&(!isFinite(hv)||hv<0||hv>100))hv=null;
+    out.push({d:t.d,m:t.m,v:v,hv:hv});
+  });
+  return out;
+}
+/* 집계: 동별·날짜별로 시간대 평균. 구간의 70% 미만만 기록된 시간대는 건너뜀 */
+function aggregateRows(rows,win,minDate){
+  var seen={},by={};
+  rows.forEach(function(r){
+    if(r.h==null)return;
+    var k=r.id+'|'+r.d+'|'+r.m;if(seen[k])return;seen[k]=1;
+    var hh=by[r.h]||(by[r.h]={}),dd=hh[r.d]||(hh[r.d]={ids:{},pts:[]});
+    dd.ids[r.id]=1;dd.pts.push(r);
+  });
+  var out=[];
+  Object.keys(by).forEach(function(h){Object.keys(by[h]).forEach(function(d){
+    if(d<minDate)return;
+    var dd=by[h][d],nS=Object.keys(dd.ids).length,vals={},cov={};
+    ['m','n','e'].forEach(function(k){
+      var st=win[k][0]*60,en=win[k][1]*60;
+      var pts=dd.pts.filter(function(p){return p.m>=st&&p.m<en;});
+      var need=(en-st)*nS,c=need>0?pts.length/need:0;cov[k]=c;
+      vals[WKEY[k]]=(c>=0.7&&pts.length)?Math.round(mean(pts.map(function(p){return p.v;}))*10)/10:null;
+      var hp=pts.filter(function(p){return p.hv!=null;});
+      vals[HKEY[k]]=(need>0&&hp.length/need>=0.7)?Math.round(mean(hp.map(function(p){return p.hv;}))*10)/10:null;
+    });
+    out.push({d:d,h:Number(h),vals:vals,cov:cov,ns:nS});
+  });});
+  out.sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:(a.h||9)-(b.h||9);});
+  return out;
+}
+async function handleImpFiles(files){
+  var c=cyc();
+  var st=settingsNow(),map={};
+  [0,1,2,3,4,5].forEach(function(h){st.sens[h].forEach(function(id){map[id]=h;});});
+  var rows=[],info=[];
+  for(var i=0;i<files.length;i++){
+    var f=files[i],m=String(f.name).toUpperCase().match(/[0-9A-F]{12}/),id=m?m[0]:null;
+    if(!id){info.push({name:f.name,err:'파일 이름에서 센서 번호(12자리)를 찾지 못했습니다.'});continue;}
+    try{
+      var data=parseSheet(await readBuf(f));
+      var h=(id in map)?map[id]:null;
+      if(!data.length){info.push({name:f.name,id:id,h:h,n:0,err:'온도 기록을 찾지 못했습니다.'});continue;}
+      data.forEach(function(r){if(h!=null)rows.push({id:id,h:h,d:r.d,m:r.m,v:r.v,hv:r.hv});});
+      var ds=data.map(function(r){return r.d;}).sort();
+      info.push({name:f.name,id:id,h:h,n:data.length,from:ds[0],to:ds[ds.length-1]});
+    }catch(e){
+      info.push({name:f.name,err:(e&&e.message==='nolib')?'엑셀 읽는 도구를 불러오지 못했습니다. 새로고침 후 다시 시도하세요.':'파일을 읽지 못했습니다.'});
+    }
+  }
+  S.imp={info:info,rows:rows,policy:'empty',cid:c?c.id:null};
+  renderImp();
+}
+function impResult(){
+  var c=cyc();if(!S.imp||!c)return [];
+  return aggregateRows(S.imp.rows,settingsNow().win,c.stockDate).filter(function(r){return ageOf(c,r.d)<=MAXAGE;});
+}
+function impPlan(res){
+  var c=cyc(),ow=S.imp.policy==='overwrite',cells=0,plan=[];
+  res.forEach(function(r){
+    var ex=dayDoc(c.id,r.d,r.h)||{},w={};
+    ALLF.forEach(function(f){
+      var v=r.vals[f.f];if(v==null)return;
+      if(isNum(ex[f.f])&&!ow)return;
+      if(isNum(ex[f.f])&&ex[f.f]===v)return;
+      w[f.f]=v;cells++;
+    });
+    if(Object.keys(w).length)plan.push({d:r.d,h:r.h,w:w});
+  });
+  return {cells:cells,plan:plan};
+}
+function renderImp(){
+  var box=$('impOut');if(!box)return;
+  var c=cyc();
+  if(!c){box.innerHTML='<p class="hint">먼저 입식 탭에서 입식을 선택하세요. 불러온 온도는 선택한 입식에 들어갑니다.</p>';return;}
+  if(!S.imp){box.innerHTML='<p class="hint">'+dot(c.stockDate)+' 입식에 넣습니다. 입식일 이전과 49일령(7주령) 이후 날짜는 건너뜁니다.</p>';return;}
+  var st=settingsNow();
+  var files=S.imp.info.map(function(f){
+    if(f.err)return '<div><span>'+esc(f.name)+'</span><span class="no">'+esc(f.err)+'</span></div>';
+    var tag=f.h!=null?'<span class="ok">'+hl(f.h)+' 센서 · '+fmt(f.n)+'건</span>':'<span class="no">등록되지 않은 센서입니다 ('+esc(f.id)+'). 아래 동별 센서 번호에 입력하세요.</span>';
+    return '<div><span>'+esc(f.name)+'</span>'+tag+'<span class="mute">'+f.from.replace(/-/g,'.')+' ~ '+f.to.replace(/-/g,'.')+'</span></div>';
+  }).join('');
+  var warn='';
+  [1,2,3,4,5,0].forEach(function(h){
+    var ids=st.sens[h],got=ids.filter(function(id){return S.imp.info.some(function(f){return f.id===id;});});
+    if(got.length&&got.length<ids.length)warn+='<p class="hint">'+hl(h)+(h===0?'는':'은')+' 등록된 센서 '+ids.length+'개 중 '+got.length+'개만 올라왔습니다. 올라온 센서 값만으로 평균합니다.</p>';
+  });
+  var res=impResult(),pl=impPlan(res),body='';
+  var ex=function(r,f){var d=dayDoc(c.id,r.d,r.h);return d&&isNum(d[f])?d[f]:null;};
+  body=res.map(function(r){
+    var tds=ALLF.map(function(f){
+      var v=r.vals[f.f],e=ex(r,f.f);
+      if(v==null)return '<td class="mute">–<small>자료 부족</small></td>';
+      if(e!=null&&S.imp.policy!=='overwrite')return '<td class="mute">'+fmtT(e)+'<small>기존 유지</small></td>';
+      if(e!=null&&e!==v)return '<td>'+fmtT(v)+'<small>기존 '+fmtT(e)+'</small></td>';
+      if(e!=null)return '<td class="mute">'+fmtT(v)+'<small>같음</small></td>';
+      return '<td>'+fmtT(v)+'</td>';
+    }).join('');
+    return '<tr><td>'+r.d.slice(5).replace('-','.')+'<small>'+ageOf(c,r.d)+'일령</small></td><td>'+hl(r.h)+'</td>'+tds+'</tr>';
+  }).join('');
+  box.innerHTML='<div class="flist">'+files+'</div>'+warn+
+    (res.length?'<div class="radios" role="radiogroup" aria-label="이미 입력된 칸 처리"><label><input type="radio" name="impPolicy" value="empty"'+(S.imp.policy!=='overwrite'?' checked':'')+'>빈 칸만 채우기</label>'+
+    '<label><input type="radio" name="impPolicy" value="overwrite"'+(S.imp.policy==='overwrite'?' checked':'')+'>이미 입력된 칸도 덮어쓰기</label></div>'+
+    '<div class="scroll"><table class="tbl"><thead><tr><th>날짜</th><th>동</th><th>'+WLAB.m+' ℃</th><th>'+WLAB.n+' ℃</th><th>'+WLAB.e+' ℃</th><th>'+WLAB.m+' %</th><th>'+WLAB.n+' %</th><th>'+WLAB.e+' %</th></tr></thead><tbody>'+body+'</tbody></table></div>'+
+    '<p class="hint">시간대 구간의 70% 미만만 기록된 칸은 "자료 부족"으로 두고 넣지 않습니다. 아직 끝나지 않은 오늘 시간대가 여기에 해당합니다.</p>'+
+    '<div class="cyc-btns"><button type="button" class="btn primary" data-act="imp-apply"'+(pl.cells&&S.canWrite?'':' disabled')+'>'+fmt(pl.cells)+'칸 입력하기</button><button type="button" class="btn" data-act="imp-clear">취소</button></div>'
+    :'<p class="hint">이 입식 기간에 해당하는 온도 기록이 없습니다. 입식일 이후 날짜의 파일인지, 센서 번호가 등록되어 있는지 확인하세요.</p><div class="cyc-btns"><button type="button" class="btn" data-act="imp-clear">닫기</button></div>');
+}
+async function applyImp(){
+  var c=cyc();if(!S.imp||!c||!S.db||!S.canWrite)return;
+  var pl=impPlan(impResult());if(!pl.cells)return;
+  try{
+    toast('입력하는 중…');
+    await runChunks(pl.plan,function(x){
+      var key=c.id+'_'+x.d+'_'+x.h;
+      var doc=Object.assign({c:c.id,d:x.d,h:x.h},S.days.get(key)||{},x.w);
+      return S.db.doc('days/'+key).set(doc);
+    },8);
+    S.imp=null;renderImp();toast('온도·습도 '+pl.cells+'칸을 입력했습니다');
+  }catch(e){handleErr(e);}
+}
+
+/* ---------- 그래프 탭: 동·외부 겹쳐보기 / 입식(파트)별 겹쳐보기 ---------- */
+var SER_ORDER=[1,2,3,4,5,0];
+var MET={temp:{k:'temp',label:'온도',unit:'℃'},humi:{k:'humi',label:'습도',unit:'%'},dead:{k:'dead',label:'폐사',unit:'마리'},cull:{k:'cull',label:'도태',unit:'마리'},
+  loss:{k:'loss',label:'폐사+도태',unit:'마리'},
+  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율',unit:''}};
+var MET_H=['temp','humi','dead','cull','loss','feed'],MET_C=['temp','humi','dead','cull','loss','feed','fpp','drate','fcr'];
+function lossOf(o){return (o?(Number(o.dead)||0)+(Number(o.cull)||0):0);}
+var GH=null;
+function gColor(h){return h===0?'var(--muted)':'var(--s'+h+')';}
+function gSwatch(h){return h===0?'repeating-linear-gradient(90deg,var(--muted) 0 5px,transparent 5px 8px)':'var(--s'+h+')';}
+function winHours(){var st=settingsNow();return {tm:(st.win.m[0]+st.win.m[1])/2,tn:(st.win.n[0]+st.win.n[1])/2,te:(st.win.e[0]+st.win.e[1])/2};}
+function isoDay(n){return new Date(n*86400000).toISOString().slice(0,10);}
+
+/* 동·외부 겹쳐보기: 현재 선택한 입식 */
+function houseSeries(c){
+  var g=S.g,hours=winHours(),series=[];
+  if(isEnv(g.metric)){
+    SER_ORDER.forEach(function(h){
+      var pts=[];
+      S.days.forEach(function(dd){
+        if(dd.h!==h||!dd.d)return;
+        var a=ageOf(c,dd.d);if(a<1)return;
+        fieldsFor(g.metric).forEach(function(f){
+          if(g.win!=='all'&&g.win!==f.w)return;
+          if(isNum(dd[f.f]))pts.push({x:a+(g.win==='all'?hours[f.w]/24:0.5),y:dd[f.f],d:dd.d,a:a,lab:f.label});
+        });
+      });
+      pts.sort(function(p,q){return p.x-q.x;});
+      series.push({key:String(h),name:hl(h),color:gColor(h),dash:h===0,sw:gSwatch(h),pts:pts});
+    });
+  }else{
+    var A=agg(),dates=Array.from(A.dates).filter(function(d){return d>=c.stockDate;}).sort();
+    [1,2,3,4,5].forEach(function(h){
+      var pts=[],run=0;
+      if(dates.length){
+        for(var n=dayNum(dates[0]);n<=dayNum(dates[dates.length-1]);n++){
+          var d=isoDay(n),ho=((A.byDate[d]||{})[h])||{},v=g.metric==='loss'?lossOf(ho):(ho[g.metric]||0);run+=v;
+          pts.push({x:ageOf(c,d)+0.5,y:g.cum?run:v,d:d,a:ageOf(c,d),lab:''});
+        }
+      }
+      series.push({key:String(h),name:hl(h),color:gColor(h),dash:false,sw:gSwatch(h),pts:pts});
+    });
+  }
+  return series;
+}
+/* 입식(파트)별 겹쳐보기 */
+function cycLabel(c){return c.stockDate.slice(2).replace(/-/g,'.')+' 입식';}
+function cycSrc(cid){
+  if(cid===S.cid)return {entries:Array.from(S.entries.values()),days:Array.from(S.days.values())};
+  return S.g.cache[cid]||null;
+}
+function scopeHs(){return S.g.scope==='all'?HOUSES:[Number(S.g.scope)];}
+function cycTotals(c,src,hs){
+  var init=0,by={},tot={cull:0,dead:0,feed:0},last=null;
+  hs.forEach(function(h){init+=headsOf(c,h);});
+  src.entries.forEach(function(e){
+    if(!e||hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||tot[e.t]===undefined)return;
+    var q=Number(e.q)||0,o=by[e.d]||(by[e.d]={cull:0,dead:0,feed:0});
+    o[e.t]+=q;tot[e.t]+=q;if(!last||e.d>last)last=e.d;
+  });
+  return {init:init,by:by,tot:tot,last:last};
+}
+function cycleSeriesPts(c,src,hs,g,hours){
+  var pts=[];
+  if(isEnv(g.metric)){
+    var by={},FS=fieldsFor(g.metric);
+    src.days.forEach(function(dd){
+      if(!dd||!dd.d||dd.d<c.stockDate||hs.indexOf(dd.h)<0)return;
+      FS.forEach(function(f){
+        if(g.win!=='all'&&g.win!==f.w)return;
+        if(isNum(dd[f.f])){var o=by[dd.d]||(by[dd.d]={});(o[f.f]=o[f.f]||[]).push(dd[f.f]);}
+      });
+    });
+    Object.keys(by).forEach(function(d){FS.forEach(function(f){
+      if(by[d][f.f])pts.push({x:ageOf(c,d)+(g.win==='all'?hours[f.w]/24:0.5),y:mean(by[d][f.f]),d:d,a:ageOf(c,d),lab:f.label});
+    });});
+    pts.sort(function(p,q){return p.x-q.x;});
+    return pts;
+  }
+  var T=cycTotals(c,src,hs),dates=Object.keys(T.by).sort();
+  if(!dates.length)return pts;
+  var run={cull:0,dead:0,feed:0};
+  for(var n=dayNum(dates[0]);n<=dayNum(dates[dates.length-1]);n++){
+    var d=isoDay(n),o=T.by[d]||{cull:0,dead:0,feed:0},a=ageOf(c,d),y=null;
+    run.cull+=o.cull;run.dead+=o.dead;run.feed+=o.feed;
+    var now=T.init-run.cull-run.dead;
+    if(g.metric==='fpp')y=now>0?run.feed/now:null;
+    else if(g.metric==='drate')y=T.init>0?run.dead/T.init*100:null;
+    else if(g.metric==='fcr'){var w=Number(c.expectedWeight)||0;y=(now>0&&w>0)?run.feed/(now*w):null;}
+    else if(g.metric==='loss')y=g.cum?(run.dead+run.cull):(o.dead+o.cull);
+    else y=g.cum?run[g.metric]:o[g.metric];
+    if(y!=null)pts.push({x:a+0.5,y:y,d:d,a:a,lab:''});
+  }
+  return pts;
+}
+function cycleSeries(){
+  var g=S.g,hs=scopeHs(),hours=winHours(),out=[];
+  g.sel.forEach(function(cid){
+    var c=cycleById(cid),src=cycSrc(cid);if(!c)return;
+    var col='var(--s'+g.color[cid]+')';
+    out.push({key:cid,name:cycLabel(c),color:col,dash:false,sw:col,loading:!src,pts:src?cycleSeriesPts(c,src,hs,g,hours):[]});
+  });
+  return out;
+}
+function ensureCmp(){
+  var g=S.g;if(g.mode!=='cycle'||!S.db)return;
+  g.sel.forEach(function(cid){
+    if(cid===S.cid||g.cache[cid]||g.pending[cid])return;
+    g.pending[cid]=true;
+    Promise.all([S.db.collection('entries').where('c','==',cid).get(),S.db.collection('days').where('c','==',cid).get()])
+      .then(function(r){g.cache[cid]={entries:r[0].docs.map(function(d){return d.data();}),days:r[1].docs.map(function(d){return d.data();})};})
+      .catch(function(){g.cache[cid]={entries:[],days:[],err:true};})
+      .then(function(){delete g.pending[cid];if(S.tab==='graph')renderGraph();});
+  });
+}
+function cmpPrepare(){
+  var g=S.g,have={};S.cycles.forEach(function(c){have[c.id]=1;});
+  g.sel=g.sel.filter(function(cid){return have[cid];});
+  Object.keys(g.color).forEach(function(k){if(g.sel.indexOf(k)<0)delete g.color[k];});
+  if(!g.sel.length&&!g.selInit){
+    var ids=[];if(S.cid)ids.push(S.cid);
+    S.cycles.forEach(function(c){if(ids.indexOf(c.id)<0)ids.push(c.id);});
+    ids.slice(0,2).forEach(function(cid){cmpAdd(cid);});
+    g.selInit=true;
+  }
+}
+function cmpAdd(cid){
+  var g=S.g,used={};Object.keys(g.color).forEach(function(k){used[g.color[k]]=1;});
+  for(var sl=1;sl<=5;sl++){if(!used[sl]){g.color[cid]=sl;g.sel.push(cid);return true;}}
+  return false;
+}
+function cycSummaryHTML(){
+  var hs=scopeHs(),g=S.g;
+  var cols=g.sel.map(function(cid){
+    var c=cycleById(cid),src=cycSrc(cid);if(!c||!src)return null;
+    var T=cycTotals(c,src,hs),now=T.init-T.tot.cull-T.tot.dead,w=Number(c.expectedWeight)||0;
+    return {c:c,T:T,now:now,w:w,cid:cid};
+  }).filter(Boolean);
+  if(!cols.length)return '';
+  var rows=[
+    ['입식 마릿수',function(x){return fmt(x.T.init);}],
+    ['마지막 기록 일령',function(x){return x.T.last?ageOf(x.c,x.T.last)+'일령':'–';}],
+    ['도태 누계',function(x){return fmtN(x.T.tot.cull);}],
+    ['폐사 누계',function(x){return fmtN(x.T.tot.dead);}],
+    ['도태+폐사 합산',function(x){return fmtN(x.T.tot.cull+x.T.tot.dead);}],
+    ['폐사율',function(x){return x.T.init>0?(x.T.tot.dead/x.T.init*100).toFixed(2)+'%':'–';}],
+    ['현재 마릿수',function(x){return fmt(x.now);}],
+    ['사료 입고 누계 (kg)',function(x){return fmtN(x.T.tot.feed);}],
+    ['마리당 사료 (kg)',function(x){return x.now>0?(x.T.tot.feed/x.now).toFixed(2):'–';}],
+    ['예상 중량 (kg)',function(x){return x.w>0?String(x.w):'–';}],
+    ['사료요구율',function(x){return (x.w>0&&x.now>0)?(x.T.tot.feed/(x.now*x.w)).toFixed(2):'–';}]
+  ];
+  return '<h2 style="margin:6px 0 0;font-family:var(--font-display);font-weight:400;font-size:20px">입식별 요약 · '+(g.scope==='all'?'전체 동':g.scope+'동')+'</h2>'+
+    '<div class="scroll"><table class="tbl sum"><thead><tr><th>항목</th>'+cols.map(function(x){return '<th><i class="sw" style="background:var(--s'+g.color[x.cid]+');display:block;margin:0 0 4px auto"></i>'+cycLabel(x.c)+'</th>';}).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+cols.map(function(x){return '<td>'+r[1](x)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>'+
+    '<p class="hint">사료요구율 = 사료 입고 누계 ÷ (현재 마릿수 × 예상 중량). 예상 중량은 평균 탭에서 입식별로 입력한 값입니다.</p>';
+}
+
+function niceTicks(lo,hi,n){
+  if(!(hi>lo))hi=lo+1;
+  var raw=(hi-lo)/n,pow=Math.pow(10,Math.floor(Math.log10(raw))),f=raw/pow;
+  var step=(f<=1?1:f<=2?2:f<=5?5:10)*pow;
+  var dec=step<1?Math.ceil(-Math.log10(step)-1e-9):0,out=[];
+  for(var v=Math.floor(lo/step)*step;v<=Math.ceil(hi/step)*step+step*1e-6;v+=step)out.push(Number(v.toFixed(dec)));
+  return {ticks:out,dec:dec};
+}
+function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):(m.k==='fpp'||m.k==='drate'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
+function renderGraph(){
+  var pane=$('pane-graph'),c=cyc(),g=S.g;
+  if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);GH=null;return;}
+  var cm=g.mode==='cycle';
+  if(!cm&&MET_H.indexOf(g.metric)<0)g.metric='temp';
+  if(cm){cmpPrepare();ensureCmp();}
+  var m=MET[g.metric];
+  var series=cm?cycleSeries():houseSeries(c);
+  var vis=cm?series:series.filter(function(s){return !g.off[s.key];});
+  var seg=function(attr,items,sel){return '<div class="seg" role="group">'+items.map(function(it){return '<button type="button" '+attr+'="'+it[0]+'" aria-pressed="'+(sel===it[0])+'">'+it[1]+'</button>';}).join('')+'</div>';};
+  var counts=(g.metric==='dead'||g.metric==='cull'||g.metric==='loss'||g.metric==='feed');
+  var ctl='<div class="gctl">'+seg('data-gmode',[['house','동·외부 비교'],['cycle','입식(파트) 비교']],g.mode)+
+    seg('data-gm',(cm?MET_C:MET_H).map(function(k){return [k,MET[k].label];}),g.metric)+
+    (isEnv(g.metric)?seg('data-gw',[['all','하루 3번'],['tm','아침'],['tn','점심'],['te','저녁']],g.win):counts?seg('data-gc',[['0','일별'],['1','누계']],g.cum?'1':'0'):'')+
+    (cm?seg('data-gsc',[['all','전체 동']].concat(HOUSES.map(function(h){return [String(h),h+'동'];})),g.scope):'')+
+    seg('data-gv',[['0','그래프'],['1','표']],g.table?'1':'0')+'</div>';
+  var legend;
+  if(cm){
+    legend='<p class="hint" style="margin:0">비교할 입식을 2~5개 선택하세요. 지금 '+g.sel.length+'개 선택됨.</p><div class="legend" role="group" aria-label="비교할 입식">'+S.cycles.map(function(x){
+      var on=g.sel.indexOf(x.id)>=0;
+      return '<button type="button" class="lg" data-gcy="'+esc(x.id)+'" aria-pressed="'+on+'"><i class="sw" style="background:'+(on?'var(--s'+g.color[x.id]+')':'var(--line)')+'"></i>'+cycLabel(x)+'</button>';
+    }).join('')+'<button type="button" class="lg" data-grf="1" style="opacity:1">새로고침</button></div>';
+  }else{
+    legend='<div class="legend" role="group" aria-label="표시할 동">'+series.map(function(s){
+      return '<button type="button" class="lg" data-gs="'+s.key+'" aria-pressed="'+(!g.off[s.key])+'"><i class="sw" style="background:'+s.sw+'"></i>'+s.name+'</button>';
+    }).join('')+'</div>';
+  }
+  var loading=cm&&series.some(function(s){return s.loading;});
+  var cap='<p class="hint">'+(m.unit?'단위 '+m.unit:'사료 입고 누계 ÷ (현재 마릿수 × 예상 중량)')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 하루 3점은 아침·점심·저녁 평균':'')+
+    (g.metric==='temp'?' · 센서 탭에서 불러온 온도와 직접 입력한 온도':g.metric==='humi'?' · 센서 탭에서 불러온 습도와 직접 입력한 습도':'')+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>';
+  if(cm&&g.metric==='fcr'){
+    var miss=g.sel.map(cycleById).filter(function(x){return x&&!(Number(x.expectedWeight)>0);});
+    if(miss.length)cap+='<p class="err">예상 중량이 없어 요구율을 그릴 수 없는 입식: '+miss.map(cycLabel).join(', ')+' (평균 탭에서 입력)</p>';
+  }
+  var all=[];vis.forEach(function(s){s.pts.forEach(function(p){all.push(p);});});
+  var body='';GH=null;
+  if(cm&&S.cycles.length<2){
+    body='<div class="state"><p>입식을 비교하려면 등록된 입식이 2개 이상 필요합니다.</p></div>';
+  }else if(!all.length){
+    body='<div class="state"><p>'+(loading?'불러오는 중…':'표시할 기록이 없습니다. '+(g.metric==='temp'?'센서 탭에서 온도 파일을 불러오거나 입력 탭에서 온도를 넣으면 나타납니다.':g.metric==='humi'?'센서 탭에서 파일을 불러오거나 입력 탭에서 습도를 넣으면 나타납니다.':'입력 탭에서 수량을 넣으면 나타납니다.'))+'</p></div>';
+  }else if(g.table){
+    var rowsMap={};
+    vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);(rowsMap[k]=rowsMap[k]||{x:p.x,d:p.d,a:p.a,lab:p.lab,v:{}}).v[s.key]=p.y;});});
+    var rows=Object.keys(rowsMap).map(function(k){return rowsMap[k];}).sort(function(a,b){return b.x-a.x;});
+    body='<div class="scroll"><table class="tbl"><thead><tr><th>'+(cm?'일령':'날짜')+'</th>'+vis.map(function(s){return '<th>'+s.name+'</th>';}).join('')+'</tr></thead><tbody>'+
+      rows.map(function(r){
+        var first=cm?r.a+'일령'+(r.lab?' '+r.lab:''):r.d.slice(5).replace('-','.')+(r.lab?' '+r.lab:'')+'<small>'+r.a+'일령</small>';
+        return '<tr><td>'+first+'</td>'+vis.map(function(s){return '<td>'+(r.v[s.key]==null?'–':gVal(m,r.v[s.key]))+'</td>';}).join('')+'</tr>';
+      }).join('')+'</tbody></table></div>';
+  }else{
+    var W=Math.max(300,Math.min(pane.clientWidth||340,920)),H=300,L=46,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B;
+    var xs=all.map(function(p){return p.x;}),ys=all.map(function(p){return p.y;});
+    var xmin=Math.floor(Math.min.apply(null,xs)),xmax=Math.ceil(Math.max.apply(null,xs));if(xmax-xmin<3)xmax=xmin+3;
+    var lo=isEnv(g.metric)?Math.min.apply(null,ys):0,hi=Math.max.apply(null,ys);
+    if(isEnv(g.metric)){var pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;}else if(!(hi>0))hi=1;
+    var nt=niceTicks(lo,hi,5),yt=nt.ticks,ymin=yt[0],ymax=yt[yt.length-1];
+    var sx=function(x){return L+(x-xmin)/(xmax-xmin)*pw;},sy=function(y){return T+ph-(y-ymin)/(ymax-ymin)*ph;};
+    var span=xmax-xmin,xstep=span<=10?1:span<=20?2:span<=40?5:7,svg='';
+    yt.forEach(function(v){svg+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+sy(v).toFixed(1)+'" y2="'+sy(v).toFixed(1)+'"/><text x="'+(L-6)+'" y="'+(sy(v)+4).toFixed(1)+'" text-anchor="end">'+v.toFixed(nt.dec)+'</text>';});
+    svg+='<line class="ga" x1="'+L+'" x2="'+(W-R)+'" y1="'+(T+ph)+'" y2="'+(T+ph)+'"/>';
+    for(var xv=Math.ceil(xmin/xstep)*xstep;xv<=xmax;xv+=xstep){svg+='<text x="'+sx(xv).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+xv+'일령</text>';}
+    vis.forEach(function(s){
+      if(!s.pts.length)return;
+      var d=s.pts.map(function(p,i){return (i?'L':'M')+sx(p.x).toFixed(1)+' '+sy(p.y).toFixed(1);}).join('');
+      svg+='<path class="ln" d="'+d+'" style="stroke:'+s.color+'"'+(s.dash?' stroke-dasharray="6 4"':'')+'/>';
+      if(s.pts.length===1)svg+='<circle cx="'+sx(s.pts[0].x).toFixed(1)+'" cy="'+sy(s.pts[0].y).toFixed(1)+'" r="4" style="fill:'+s.color+'"/>';
+    });
+    svg+='<line id="gcur" class="gcur" y1="'+T+'" y2="'+(T+ph)+'" style="display:none"/><g id="gdots"></g>'+
+      '<rect id="ghit" x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>';
+    body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+m.label+' 비교 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg><div class="gtip" id="gtip" style="display:none"></div></div>';
+    GH={vis:vis,m:m,sx:sx,sy:sy,W:W,H:H,L:L,R:R,T:T,ph:ph,pw:pw,xmin:xmin,xmax:xmax,cm:cm};
+  }
+  pane.innerHTML='<div class="card">'+ctl+legend+cap+body+(cm&&S.cycles.length>=2?cycSummaryHTML():'')+'</div>';
+  if(GH)bindGraphHover();
+}
+function bindGraphHover(){
+  var svg=$('gsvg'),hit=$('ghit'),cur=$('gcur'),dots=$('gdots'),tip=$('gtip'),wrap=$('gwrap');
+  if(!svg||!GH)return;
+  var G=GH,xsU=[],seen={};
+  G.vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);if(!seen[k]){seen[k]=1;xsU.push(p.x);}});});
+  function move(e){
+    var r=svg.getBoundingClientRect(),k=G.W/r.width;
+    var px=(e.clientX-r.left)*k,xv=G.xmin+(px-G.L)/G.pw*(G.xmax-G.xmin);
+    var best=xsU[0],bd=Infinity;
+    xsU.forEach(function(x){var d=Math.abs(x-xv);if(d<bd){bd=d;best=x;}});
+    var rows=[],head=null,dh='';
+    G.vis.forEach(function(s){
+      for(var i=0;i<s.pts.length;i++){
+        var p=s.pts[i];
+        if(Math.abs(p.x-best)<1e-9){
+          rows.push({s:s,p:p});if(!head)head=p;
+          dh+='<circle cx="'+G.sx(p.x).toFixed(1)+'" cy="'+G.sy(p.y).toFixed(1)+'" r="4.5" style="fill:'+s.color+';stroke:var(--surface);stroke-width:2"/>';
+          break;
+        }
+      }
+    });
+    if(!head)return;
+    var cx=G.sx(best);
+    cur.setAttribute('x1',cx.toFixed(1));cur.setAttribute('x2',cx.toFixed(1));cur.style.display='';
+    dots.innerHTML=dh;
+    tip.innerHTML='<b>'+head.a+'일령'+(G.cm?'':' · '+head.d.slice(5).replace('-','.'))+(head.lab?' '+head.lab:'')+'</b>'+
+      rows.map(function(x){return '<div><span><i style="background:'+x.s.sw+'"></i>'+x.s.name+'</span><span>'+gVal(G.m,x.p.y)+' '+G.m.unit+'</span></div>';}).join('');
+    tip.style.display='';
+    var cssX=cx/k,tw=tip.offsetWidth,left=cssX+12;
+    if(left+tw>wrap.clientWidth)left=cssX-12-tw;
+    tip.style.left=Math.max(0,left)+'px';
+  }
+  function leave(){cur.style.display='none';dots.innerHTML='';tip.style.display='none';}
+  hit.addEventListener('pointermove',move);
+  hit.addEventListener('pointerdown',move);
+  hit.addEventListener('pointerleave',leave);
+}
+
+/* ---------- 엑셀로 받기: 입식·내용·동을 골라서 선택한 것만 ---------- */
+function xlSheetName(n){return String(n).replace(/[\\\/\?\*\[\]:]/g,'').slice(0,31);}
+function openExport(cid){
+  var box=$('bkBox');if(!box)return;
+  var cycles=S.cycles.map(function(c){
+    return '<label><input type="checkbox" name="xc" value="'+esc(c.id)+'"'+(c.id===cid?' checked':'')+'>'+esc(dot(c.stockDate))+' 입식 · 총 '+fmt(c.total)+'수</label>';
+  }).join('');
+  var hs=HOUSES.map(function(h){return '<label><input type="checkbox" name="xh" value="'+h+'" checked>'+h+'동</label>';}).join('')+
+    '<label><input type="checkbox" name="xh" value="0" checked>외부 (온도·습도만)</label>';
+  var lab=function(t){return '<p style="margin:8px 0 0;font-weight:700">'+t+'</p>';};
+  box.innerHTML='<section class="card"><div class="cardhead"><h2>엑셀로 받기</h2><button type="button" class="btn" data-act="xl-close">닫기</button></div>'+
+    lab('입식 선택')+'<div class="radios">'+cycles+'</div>'+
+    lab('포함할 내용')+'<div class="radios">'+
+      '<label><input type="checkbox" name="xw" value="info" checked>입식 정보 (입식일·마릿수·비고)</label>'+
+      '<label><input type="checkbox" name="xw" value="count" checked>일별 도태·폐사·사료 입고</label>'+
+      '<label><input type="checkbox" name="xw" value="temp" checked>일별 온도·습도 (아침·점심·저녁)</label>'+
+      '<label><input type="checkbox" name="xw" value="note" checked>일별 비고(메모)</label>'+
+      '<label><input type="checkbox" name="xw" value="sum" checked>동별 요약 (누계·폐사율·마리당 사료·요구율)</label></div>'+
+    lab('동 선택')+'<div class="radios">'+hs+'</div>'+
+    '<p class="err" id="xErr" hidden></p>'+
+    '<div class="cyc-btns"><button type="button" class="btn primary" data-act="xl-go">엑셀 파일 만들기</button></div></section>';
+  box.scrollIntoView({block:'nearest'});
+}
+function xlChecked(name){return Array.prototype.map.call(document.querySelectorAll('#bkBox input[name="'+name+'"]:checked'),function(i){return i.value;});}
+async function xlGetData(cid){
+  if(cid===S.cid)return {entries:Array.from(S.entries.values()),days:Array.from(S.days.values())};
+  var r=await Promise.all([S.db.collection('entries').where('c','==',cid).get(),S.db.collection('days').where('c','==',cid).get()]);
+  return {entries:r[0].docs.map(function(d){return d.data();}),days:r[1].docs.map(function(d){return d.data();})};
+}
+function xlTotals(c,data,hs){
+  var tot={cull:0,dead:0,feed:0},init=0;
+  hs.forEach(function(h){init+=headsOf(c,h);});
+  data.entries.forEach(function(e){
+    if(hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||tot[e.t]===undefined)return;
+    tot[e.t]+=Number(e.q)||0;
+  });
+  var now=init-tot.cull-tot.dead,w=Number(c.expectedWeight)||0,r2=function(v){return Math.round(v*100)/100;};
+  return {init:init,cull:tot.cull,dead:tot.dead,feed:tot.feed,now:now,w:w,
+    rate:init>0?r2(tot.dead/init*100):null,fpp:now>0?r2(tot.feed/now):null,fcr:(now>0&&w>0)?r2(tot.feed/(now*w)):null};
+}
+/* 선택한 내용만으로 시트 자료(2차원 배열)를 만든다 */
+function xlBuild(cycles,datas,opt){
+  var sheets=[],hs=opt.houses.filter(function(h){return h>0;}),r1=function(v){return Math.round(v*10)/10;};
+  if(opt.info){
+    var head=['입식일','총 마릿수','입식수(서비스 포함)'].concat(HOUSES.map(function(h){return h+'동 입식수';})).concat(['예상 중량(kg)','비고']);
+    var rows=cycles.map(function(c){
+      return [c.stockDate,Number(c.total)||0,HOUSES.reduce(function(a,h){return a+headsOf(c,h);},0)].concat(HOUSES.map(function(h){return headsOf(c,h);})).concat([Number(c.expectedWeight)||null,c.note||'']);
+    });
+    sheets.push({name:'입식 정보',aoa:[head].concat(rows)});
+  }
+  if(opt.sum&&cycles.length>1){
+    var head2=['입식일','입식 마릿수','도태 누계','폐사 누계','폐사율(%)','현재 마릿수','사료 입고 누계(kg)','마리당 사료(kg)','예상 중량(kg)','사료요구율'];
+    var rows2=cycles.map(function(c,i){var t=xlTotals(c,datas[i],hs);return [c.stockDate,t.init,t.cull,t.dead,t.rate,t.now,t.feed,t.fpp,t.w||null,t.fcr];});
+    sheets.push({name:'입식 비교',aoa:[head2].concat(rows2)});
+  }
+  cycles.forEach(function(c,i){
+    var tag=c.stockDate.slice(2).replace(/-/g,''),data=datas[i];
+    if(opt.count||opt.temp||opt.note){
+      var m={},row=function(d,h){var k=d+'|'+h;return m[k]||(m[k]={d:d,h:h,cull:null,dead:null,feed:null,tm:null,tn:null,te:null,hm:null,hn:null,he:null,memo:''});};
+      if(opt.count)data.entries.forEach(function(e){
+        if(hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||['cull','dead','feed'].indexOf(e.t)<0)return;
+        var r=row(e.d,e.h);r[e.t]=(r[e.t]||0)+(Number(e.q)||0);
+      });
+      data.days.forEach(function(dd){
+        if(!dd||!dd.d||dd.d<c.stockDate||opt.houses.indexOf(dd.h)<0)return;
+        if(opt.temp)ALLF.forEach(function(f){if(isNum(dd[f.f]))row(dd.d,dd.h)[f.f]=dd[f.f];});
+        if(opt.note&&dd.h>0&&dd.memo&&String(dd.memo).trim())row(dd.d,dd.h).memo=String(dd.memo).trim();
+      });
+      var list=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.h||9)-(b.h||9);});
+      var head3=['날짜','일령','동'].concat(opt.count?['도태','폐사','사료 입고(kg)']:[]).concat(opt.temp?['아침 ℃','점심 ℃','저녁 ℃','아침 %','점심 %','저녁 %']:[]).concat(opt.note?['비고']:[]);
+      var rows3=list.map(function(r){
+        return [r.d,ageOf(c,r.d),hl(r.h)].concat(opt.count?[r.cull,r.dead,r.feed]:[]).concat(opt.temp?[r.tm,r.tn,r.te,r.hm,r.hn,r.he]:[]).concat(opt.note?[r.memo||null]:[]);
+      });
+      sheets.push({name:'일별 기록 '+tag,aoa:[head3].concat(rows3)});
+    }
+    if(opt.sum){
+      var head4=['동','입식 마릿수','도태 누계','폐사 누계','폐사율(%)','현재 마릿수','사료 입고 누계(kg)','마리당 사료(kg)','예상 중량(kg)','사료요구율'];
+      var rows4=hs.map(function(h){var t=xlTotals(c,data,[h]);return [hl(h),t.init,t.cull,t.dead,t.rate,t.now,t.feed,t.fpp,t.w||null,t.fcr];});
+      if(hs.length>1){var ta=xlTotals(c,data,hs);rows4.push(['선택한 동 전체',ta.init,ta.cull,ta.dead,ta.rate,ta.now,ta.feed,ta.fpp,ta.w||null,ta.fcr]);}
+      sheets.push({name:'동별 요약 '+tag,aoa:[head4].concat(rows4)});
+    }
+  });
+  return sheets;
+}
+async function doExport(){
+  var err=$('xErr');err.hidden=true;
+  var fail=function(m){err.textContent=m;err.hidden=false;};
+  var ids=xlChecked('xc'),what=xlChecked('xw'),houses=xlChecked('xh').map(Number);
+  var opt={info:what.indexOf('info')>=0,count:what.indexOf('count')>=0,temp:what.indexOf('temp')>=0,note:what.indexOf('note')>=0,sum:what.indexOf('sum')>=0,houses:houses};
+  if(!ids.length)return fail('내보낼 입식을 하나 이상 선택하세요.');
+  if(!what.length)return fail('포함할 내용을 하나 이상 선택하세요.');
+  if(opt.count||opt.note||opt.sum){
+    if(!houses.some(function(h){return h>0;})&&!opt.temp&&!opt.info)return fail('동을 하나 이상 선택하세요.');
+  }
+  if(!houses.length&&(opt.count||opt.temp||opt.note||opt.sum))return fail('동을 하나 이상 선택하세요.');
+  if(typeof XLSX==='undefined')return fail('엑셀 파일을 만드는 도구를 불러오지 못했습니다. 화면을 새로고침한 뒤 다시 시도하세요.');
+  if(!S.dl)return fail('이 기기에서는 파일 저장을 사용할 수 없습니다.');
+  var btn=document.querySelector('#bkBox [data-act="xl-go"]');if(btn)btn.disabled=true;
+  try{
+    toast('엑셀 만드는 중…');
+    var cycles=S.cycles.filter(function(c){return ids.indexOf(c.id)>=0;}).sort(function(a,b){return a.stockDate<b.stockDate?-1:1;});
+    var datas=[];for(var i=0;i<cycles.length;i++){datas.push(await xlGetData(cycles[i].id));}
+    var sheets=xlBuild(cycles,datas,opt);
+    if(!sheets.length)return fail('선택한 조건에 맞는 내용이 없습니다. 내용이나 동을 다시 선택하세요.');
+    var wb=XLSX.utils.book_new(),used={};
+    sheets.forEach(function(sh){
+      var nm=xlSheetName(sh.name),k=nm,n=2;while(used[k]){k=xlSheetName(nm.slice(0,28)+' '+n);n++;}used[k]=1;
+      var ws=XLSX.utils.aoa_to_sheet(sh.aoa);
+      ws['!cols']=sh.aoa[0].map(function(h,ci){var w=String(h).length*2+2;sh.aoa.slice(1,40).forEach(function(r){var l=String(r[ci]==null?'':r[ci]).length;if(l>w)w=l;});return {wch:Math.min(Math.max(w,8),40)};});
+      XLSX.utils.book_append_sheet(wb,ws,k);
+    });
+    var out=XLSX.write(wb,{bookType:'xlsx',type:'array'});
+    var name=cycles.length===1?'worklog_'+cycles[0].stockDate+'.xlsx':'worklog_'+cycles.length+'cycles_'+todayStr()+'.xlsx';
+    try{await S.dl.save({filename:name,data:out});toast('엑셀 파일을 저장했습니다');$('bkBox').innerHTML='';}
+    catch(e){if(!(e&&e.code==='declined'))fail('파일을 저장하지 못했습니다. 다시 시도하세요.');}
+  }catch(e){fail('엑셀을 만들지 못했습니다. 다시 시도하세요.');handleErr(e);}
+  finally{if(btn)btn.disabled=false;}
+}
+
+/* ---------- 이벤트 ---------- */
+var timers={};
+function bind(){
+  document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){S.tab=b.dataset.tab;if(S.tab==='graph')S.g.cache={};render();window.scrollTo(0,0);});});
+  var rzT=null;
+  window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(function(){if(S.tab==='graph')renderGraph();},200);});
+  $('cycBtn').addEventListener('click',function(){goHome(false);});
+  $('newBtn').addEventListener('click',function(){cancelEdit();goHome(true);});
+
+  document.addEventListener('click',function(e){
+    var a=e.target.closest('[data-act]');
+    if(a){
+      var act=a.dataset.act;
+      var cid=a.dataset.cid;
+      if(act==='new'){cancelEdit();goHome(true);return;}
+      if(act==='save'){saveCycle();return;}
+      if(act==='cancel-edit'){cancelEdit();return;}
+      if(act==='open'){S.date=todayStr();S.tab='input';selectCycle(cid);window.scrollTo(0,0);return;}
+      if(act==='edit'){startEdit(cid);return;}
+      if(act==='backup'){backupCycle(cid);return;}
+      if(act==='sv-add'){saveSettle(function(d){d.ship=d.ship||{};d.ship.weights=(d.ship.weights||[]).concat([null]);});return;}
+      if(act==='sv-del'){var vi=Number(a.dataset.i);saveSettle(function(d){d.ship=d.ship||{};d.ship.weights=(d.ship.weights||[]).filter(function(_,i){return i!==vi;});});return;}
+      if(act==='se-add'){saveSettle(function(d){d.etc=(d.etc||[]).concat([{memo:'',amt:null}]);});return;}
+      if(act==='se-del'){var ei=Number(a.dataset.i);saveSettle(function(d){d.etc=(d.etc||[]).filter(function(_,i){return i!==ei;});});return;}
+      if(act==='st-copy'){copyTerms();return;}
+      if(act==='abdl'){downloadAutoBk(cid,a.dataset.age);return;}
+      if(act==='xl-open'){openExport(cid);return;}
+      if(act==='xl-close'){$('bkBox').innerHTML='';return;}
+      if(act==='xl-go'){doExport();return;}
+      if(act==='askdel'){S.delId=cid;fillList();return;}
+      if(act==='delno'){S.delId=null;fillList();return;}
+      if(act==='deldo'){deleteCycle(cid);return;}
+      if(act==='bkclose'){$('bkBox').innerHTML='';return;}
+      if(act==='bkcopy'){
+        var ta=$('bkText');
+        try{navigator.clipboard.writeText(ta.value).then(function(){toast('복사됨');}).catch(function(){ta.select();toast('선택됨 · 길게 눌러 복사하세요');});}
+        catch(x){ta.select();toast('선택됨 · 길게 눌러 복사하세요');}
+        return;
+      }
+      if(act==='restore-pick'){$('restoreFile').value='';$('restoreFile').click();return;}
+      if(act==='imp-pick'){$('impFile').value='';$('impFile').click();return;}
+      if(act==='imp-apply'){applyImp();return;}
+      if(act==='imp-clear'){S.imp=null;renderImp();return;}
+      if(act==='restore-go'){doRestore();return;}
+      if(act==='restore-cancel'){S.restore=null;$('bkBox').innerHTML='';return;}
+      if(act==='prev'){S.date=addDays(S.date,-1);render();return;}
+      if(act==='next'){S.date=addDays(S.date,1);render();return;}
+      if(act==='today'){S.date=todayStr();render();return;}
+    }
+    var gm=e.target.closest('[data-gm]');
+    if(gm){S.g.metric=gm.dataset.gm;renderGraph();return;}
+    var gw=e.target.closest('[data-gw]');
+    if(gw){S.g.win=gw.dataset.gw;renderGraph();return;}
+    var gc=e.target.closest('[data-gc]');
+    if(gc){S.g.cum=gc.dataset.gc==='1';renderGraph();return;}
+    var gv=e.target.closest('[data-gv]');
+    if(gv){S.g.table=gv.dataset.gv==='1';renderGraph();return;}
+    var gmo=e.target.closest('[data-gmode]');
+    if(gmo){S.g.mode=gmo.dataset.gmode;if(S.g.mode==='cycle')S.g.cache={};renderGraph();return;}
+    var gsc=e.target.closest('[data-gsc]');
+    if(gsc){S.g.scope=gsc.dataset.gsc;renderGraph();return;}
+    var gcy=e.target.closest('[data-gcy]');
+    if(gcy){
+      var gid=gcy.dataset.gcy,ix=S.g.sel.indexOf(gid);
+      if(ix>=0){S.g.sel.splice(ix,1);delete S.g.color[gid];}
+      else if(S.g.sel.length>=5){toast('최대 5개까지 비교할 수 있습니다');return;}
+      else cmpAdd(gid);
+      S.g.selInit=true;renderGraph();return;
+    }
+    if(e.target.closest('[data-grf]')){S.g.cache={};renderGraph();toast('다시 불러오는 중…');return;}
+    var gs=e.target.closest('[data-gs]');
+    if(gs){var hk=gs.dataset.gs;if(S.g.off[hk])delete S.g.off[hk];else S.g.off[hk]=true;renderGraph();return;}
+    var f=e.target.closest('[data-filter]');
+    if(f){S.filter=f.dataset.filter;render();return;}
+    var d=e.target.closest('[data-d]');
+    if(d){S.date=d.dataset.d;S.tab='input';render();window.scrollTo(0,0);return;}
+    var s=e.target.closest('[data-sign]');
+    if(s){var neg=!s.classList.contains('neg');s.classList.toggle('neg',neg);s.textContent=neg?'−':'+';s.setAttribute('aria-pressed',neg?'true':'false');return;}
+    var del=e.target.closest('[data-del]');
+    if(del&&S.db&&S.canWrite){
+      var id=del.dataset.del;
+      S.db.doc('entries/'+id).delete().then(function(){toast('입력을 취소했습니다');}).catch(handleErr);
+    }
+  });
+  document.addEventListener('keydown',function(e){
+    if(e.key==='Enter'&&e.target.matches&&e.target.matches('.qin,.tin,.hin,.kin,.sfld,.sin,.win,#wIn,#dateIn'))e.target.blur();
+  });
+  document.addEventListener('change',function(e){
+    var t=e.target;if(!t.matches)return;
+    if(t.classList.contains('sfld')){settleChange(t);return;}
+    if(t.id==='impFile'){if(t.files&&t.files.length)handleImpFiles(Array.prototype.slice.call(t.files));return;}
+    if(t.name==='impPolicy'){if(S.imp){S.imp.policy=t.value;renderImp();}return;}
+    if(t.classList.contains('sin')||t.classList.contains('win')){saveSettings();return;}
+    if(t.id==='restoreFile'){if(t.files&&t.files[0])pickRestore(t.files[0]);return;}
+    if(t.id==='nDate'){renderNMonths();return;}
+    if(t.id==='dateIn'){if(/^\d{4}-\d{2}-\d{2}$/.test(t.value)){S.date=t.value;render();}return;}
+    if(t.id==='wIn'){
+      var raw=t.value.trim().replace(/,/g,'');var v=raw===''?null:Number(raw);
+      if(v!==null&&(!isFinite(v)||v<=0)){toast('예상 중량을 숫자로 입력하세요');return;}
+      if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedWeight:v}).then(function(){toast('저장됨');}).catch(handleErr);
+      return;
+    }
+    if(t.classList.contains('qin')){
+      var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
+      var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
+      var sg=t.parentElement.querySelector('[data-sign]');
+      if(sg.classList.contains('neg'))q=-Math.abs(q);
+      var type=TYPES.filter(function(x){return x.k===t.dataset.t;})[0];
+      q=type.int?Math.round(q):Math.round(q*10)/10;
+      if(q===0){t.value='';return;}
+      t.value='';sg.classList.remove('neg');sg.textContent='+';sg.setAttribute('aria-pressed','false');
+      addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ);
+      return;
+    }
+    if(t.type==='checkbox'&&(t.dataset.f==='rot'||t.dataset.f==='hk')){
+      var hh=Number(t.dataset.h);
+      if(t.dataset.f==='hk'){
+        var kg2=t.closest('.works').querySelector('.kin');
+        if(kg2){kg2.disabled=!t.checked;if(!t.checked)kg2.value='';}
+        if(!t.checked)saveDayField(hh,'hkg',null);
+      }
+      saveDayField(hh,t.dataset.f,t.checked);return;
+    }
+    if(t.classList.contains('kin')){
+      var rk=t.value.trim().replace(/,/g,'');var kv=rk===''?null:Number(rk);
+      if(kv!==null&&(!isFinite(kv)||kv<0)){toast('kg를 숫자로 입력하세요');return;}
+      saveDayField(Number(t.dataset.h),'hkg',kv);return;
+    }
+    if(t.classList.contains('hin')){
+      var rh=t.value.trim().replace(/,/g,'');var hv=rh===''?null:Number(rh);
+      if(hv!==null&&(!isFinite(hv)||hv<0||hv>100)){toast('습도를 0~100 사이 숫자로 입력하세요');return;}
+      saveDayField(Number(t.dataset.h),t.dataset.f,hv);return;
+    }
+    if(t.classList.contains('tin')){
+      var rt=t.value.trim().replace(/,/g,'');var tv=rt===''?null:Number(rt);
+      if(tv!==null&&!isFinite(tv)){toast('온도를 숫자로 입력하세요');return;}
+      saveDayField(Number(t.dataset.h),t.dataset.f,tv);return;
+    }
+    if(t.classList.contains('memo')){
+      var k='memo'+t.dataset.h;clearTimeout(timers[k]);saveDayField(Number(t.dataset.h),'memo',t.value);
+    }
+  });
+  document.addEventListener('input',function(e){
+    var t=e.target;
+    if(t&&t.id==='nTotal'){updatePrev();return;}
+    if(!t.classList||!t.classList.contains('memo'))return;
+    var k='memo'+t.dataset.h,h=Number(t.dataset.h),val=t.value;clearTimeout(timers[k]);
+    timers[k]=setTimeout(function(){saveDayField(h,'memo',val);},1200);
+  });
+}
+
+var TO='__timeout__';
+function withTimeout(p,ms){
+  return Promise.race([Promise.resolve(p),new Promise(function(r){setTimeout(function(){r(TO);},ms);})]);
+}
+function giveUp(msg){
+  if(S.ready)return;
+  S.ready=true;notice(msg,true);render();
+}
+async function init(){
+  bind();
+  try{
+    var rawC=lsGet('wl-cyc');
+    if(rawC){
+      var arrC=JSON.parse(rawC);
+      if(Array.isArray(arrC)&&arrC.length){
+        S.cycles=arrC;S.ready=true;S.stale=true;
+        var prefC=lsGet('wl-cid');
+        S.cid=arrC.some(function(c){return c.id===prefC;})?prefC:arrC[0].id;
+      }
+    }
+  }catch(e){}
+  render();
+  var dbv=null;
+  try{
+    var cl=window.claude;
+    if(cl&&cl.use){
+      S.status='저장소 연결 중…';
+      dbv=await withTimeout(cl.use('db'),6000);
+      if(dbv===TO)dbv=null;
+      S.db=dbv;
+      if(S.db){
+        S.status='사용자 확인 중…';render();
+        var u=await withTimeout(cl.use('user'),4000);
+        S.user=(u===TO)?null:u;
+        try{var dl=await withTimeout(cl.use('downloads'),3000);S.dl=(dl===TO)?null:dl;}catch(e){S.dl=null;}
+        if(S.user){
+          try{var id=await withTimeout(S.user.id(),3000);if(id!==TO)S.uid=id;}catch(e){}
+          try{var cw=await withTimeout(S.user.can&&S.user.can('data.write'),3000);if(cw===false)S.canWrite=false;}catch(e){}
+        }
+      }
+    }
+  }catch(e){S.db=null;}
+  if(!S.db){S.ready=true;render();return;}
+  if(!S.canWrite)notice('이 계정은 입력 권한이 없습니다. 관리자에게 문의하세요.',false);
+  S.status='입식 목록 불러오는 중…';render();
+  try{
+    S.db.doc('settings/main').onSnapshot(function(d){
+      S.settings=d.exists?d.data():null;
+      if(S.tab==='sensor'){refreshSensor();renderImp();}
+    },function(e){});
+  }catch(e){}
+  try{
+    S.db.collection('cycles').onSnapshot(function(sn){S.dbg.실시간=sn.docs.length+'건'+(sn.metadata&&sn.metadata.fromCache?'(캐시)':'');onCycles(sn);},function(e){S.dbg.실시간='오류 '+((e&&(e.code||e.message))||'?');handleErr(e);});
+  }catch(e){handleErr(e);}
+  loadCycles(0);
+  setTimeout(function(){
+    if(!S.ready){S.status='저장소 응답이 늦습니다. 자동으로 다시 시도하는 중…';render();}
+  },8000);
+  var tick=setInterval(function(){
+    if(S.ready){clearInterval(tick);return;}
+    S.status='저장소 응답이 늦습니다. 자동으로 다시 시도하는 중…\n['+dbgTxt()+']';render();
+  },3000);
+}
+window.__appInit=init;
+})();
+</script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script>
+(function(){
+var CFG={"apiKey": "AIzaSyDfo0iTRqLxDzbjGnK0FlPP-zWHI8IM9oM", "authDomain": "duck-worklog.firebaseapp.com", "projectId": "duck-worklog", "storageBucket": "duck-worklog.firebasestorage.app", "messagingSenderId": "735221395499", "appId": "1:735221395499:web:067e9e9deece46967c7a6e", "ownerEmail": "ma.nogi40@gmail.com"};
+var $=function(i){return document.getElementById(i);};
+var started=false,fdb=null,fuser=null;
+function normMail(e){e=String(e||'').toLowerCase().trim();var m=e.split('@');if(m.length===2&&(m[1]==='gmail.com'||m[1]==='googlemail.com'))return m[0].split('+')[0].replace(/\./g,'')+'@gmail.com';return e;}
+function showLogin(msg){var l=$('login');l.hidden=false;$('lgErr').textContent=msg||'';$('lgBtn').disabled=false;}
+function errKo(e){
+  var c=(e&&e.code)||'';
+  if(c==='auth/invalid-credential'||c==='auth/wrong-password'||c==='auth/user-not-found'||c==='auth/invalid-login-credentials')return '이메일 또는 비밀번호가 맞지 않습니다.';
+  if(c==='auth/invalid-email')return '이메일 형식이 올바르지 않습니다.';
+  if(c==='auth/too-many-requests')return '시도가 너무 많습니다. 잠시 후 다시 해 보세요.';
+  if(c==='auth/network-request-failed')return '인터넷 연결을 확인하세요.';
+  return '로그인하지 못했습니다. ('+(c||'오류')+')';
+}
+function dl(req){
+  return new Promise(function(res,rej){
+    try{
+      var blob=(req.data instanceof Blob)?req.data:new Blob([req.data],{type:'application/octet-stream'});
+      var a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=req.filename;
+      document.body.appendChild(a);a.click();
+      setTimeout(function(){URL.revokeObjectURL(a.href);a.remove();},4000);
+      res({status:'saved'});
+    }catch(e){rej({code:'unavailable',message:String(e)});}
+  });
+}
+window.claude={use:function(name){
+  if(name==='db')return Promise.resolve(fdb);
+  if(name==='downloads')return Promise.resolve({save:dl});
+  if(name==='user')return Promise.resolve({
+    id:function(){return Promise.resolve(fuser?fuser.uid:null);},
+    can:function(){return Promise.resolve(true);},
+    isOwner:function(){return !CFG.ownerEmail||!!(fuser&&fuser.email&&normMail(fuser.email)===normMail(CFG.ownerEmail));}
+  });
+  return Promise.resolve(null);
+}};
+if(!CFG.projectId||!CFG.apiKey||/^여기/.test(CFG.apiKey)){
+  showLogin('Firebase 설정이 아직 입력되지 않았습니다. (firebase-config)');$('lgBtn').disabled=true;return;
+}
+if(typeof firebase==='undefined'){showLogin('Firebase를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 열어 주세요.');$('lgBtn').disabled=true;return;}
+firebase.initializeApp(CFG);
+var auth=firebase.auth();
+auth.onAuthStateChanged(function(u){
+  if(u){
+    fuser=u;fdb=firebase.firestore();
+    $('login').hidden=true;$('fbOut').hidden=false;$('whoami').textContent=u.email||'';
+    if(!started){started=true;if(window.__appInit)window.__appInit();}
+  }else{
+    if(started){location.reload();return;}
+    showLogin('');
+  }
+});
+$('loginForm').addEventListener('submit',function(e){
+  e.preventDefault();$('lgBtn').disabled=true;$('lgErr').textContent='';
+  auth.signInWithEmailAndPassword($('lgEmail').value.trim(),$('lgPw').value).catch(function(err){showLogin(errKo(err));});
+});
+$('fbOut').addEventListener('click',function(){auth.signOut();});
+if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}}
+})();
+</script>
+</body></html>
