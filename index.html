@@ -801,7 +801,7 @@ function renderHome(){
       '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
       '<div class="memo-label" style="margin:10px 0 0">정산 단가 <span class="hint">(선택 · 정산 탭에 자동 적용, 나중에 고칠 수 있음)</span></div>'+
       nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('사료 단가','nFeed','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('기타 보조금','nOther','원/마리')+
-      '<p class="hint">연료·깔짚 보조금은 정산 탭의 \'월별 보조금 단가\'에 1~12월을 한 번만 입력해 두면 자동 적용됩니다.</p></div>'+
+      '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML('n')+'</div>'+
       '<div class="prev" id="nPrev" aria-live="polite"></div>'+
       '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
       '<p class="err" id="nErr" hidden></p>'+
@@ -811,6 +811,7 @@ function renderHome(){
   }
   if(isOwner()&&S.db&&S.ready&&S.cycles.length&&!S.bkClean){S.bkClean=true;cleanLegacyBackups();}
   var ntb=$('nTermsBox');if(ntb)ntb.hidden=!isOwner();
+  fillNSub();
   if(S.db&&S.ready&&!S.prefilled&&!S.editId){S.prefilled=true;prefillTerms();}
   fillList();refreshAutoBk(false);
 }
@@ -1158,14 +1159,22 @@ function stKeyOf(c){
 function mf(label,sk,unit,ph){
   return '<label class="sd-row"><span>'+label+(unit?'<span class="s">'+unit+'</span>':'')+'</span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" data-sk="'+sk+'" placeholder="'+(ph||'0')+'" aria-label="'+label+'"></label>';
 }
-function subHTML(){
+function subHTML(mode){
+  var at=function(k,n){return mode==='n'?'data-nsub="'+k+':'+n+'"':'data-sk="sub:'+k+':'+n+'"';};
   var rows='';
   for(var n=1;n<=12;n++){
     rows+='<tr><td>'+n+'월</td>'+
-      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-sk="sub:fuel:'+n+'" placeholder="0" aria-label="'+n+'월 연료 보조금 단가"></td>'+
-      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" data-sk="sub:litter:'+n+'" placeholder="0" aria-label="'+n+'월 깔짚 보조금 단가"></td></tr>';
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" '+at('fuel',n)+' placeholder="0" aria-label="'+n+'월 연료 보조금 단가"></td>'+
+      '<td><input class="sfld sm" type="text" inputmode="decimal" autocomplete="off" '+at('litter',n)+' placeholder="0" aria-label="'+n+'월 깔짚 보조금 단가"></td></tr>';
   }
   return '<div class="scroll"><table class="tbl"><thead><tr><th>월</th><th>연료 (원/마리)</th><th>깔짚 (원/마리)</th></tr></thead><tbody>'+rows+'</tbody></table></div>';
+}
+function fillNSub(){
+  document.querySelectorAll('[data-nsub]').forEach(function(e){
+    if(document.activeElement===e)return;
+    var m=e.dataset.nsub.split(':'),v=subv(m[0],Number(m[1])),t=isNum(v)?String(v):'';
+    if(e.value!==t)e.value=t;
+  });
 }
 function saveSub(kind,n,v){
   if(!S.db||!S.canWrite)return;
@@ -1174,7 +1183,7 @@ function saveSub(kind,n,v){
   d.updatedAt=Date.now();S.sub=d;
   settleChain=settleChain.then(function(){return S.db.doc('settings/subsidy').set(d);})
     .then(function(){toast('저장됨');}).catch(function(e){handleErr(e);});
-  refreshSettle();
+  refreshSettle();fillNSub();
 }
 function settleFormHTML(c){
   var d=sdoc(),sh=d.ship||{},ws=Array.isArray(sh.weights)?sh.weights:[],etc=Array.isArray(d.etc)?d.etc:[],mk=monthKeys(c);
@@ -1202,12 +1211,13 @@ function settleFormHTML(c){
     '<p class="hint">회사마다 다른 계약 조건을 이 입식에 맞게 넣으세요. 정산서가 바로 다시 계산됩니다.</p>'+
     mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('사료 단가','terms.feed','원/kg')+
     mf('친환경 보조금','terms.eco','원/마리')+mf('기타 보조금','terms.otherSub','원/마리')+
+    '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML()+
+    '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달</div>'+
     '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 (월별 단가 원/마리 · 사육일수로 가중평균)</div>'+
     '<div class="scroll"><table class="tbl mon"><thead><tr><th>월</th><th>기간 중 일수</th><th>연료 단가</th><th>깔짚 단가</th><th>반영 단가(연료+깔짚)</th></tr></thead><tbody>'+mrows+'</tbody></table></div>'+
-    '<p class="hint">월별 단가는 아래 \'월별 보조금 단가\'에서 입력합니다. 적용 단가 = Σ (월 단가 × 사육기간 중 그 달에 든 일수) ÷ 사육기간 전체 일수. 사육기간은 입식일부터 출하일까지, 두 날짜 모두 포함합니다. 보조금 = 적용 단가 × 출하 마릿수.</p>'+
+    '<p class="hint">월별 단가는 위 \'월별 보조금 단가\'에서 입력합니다. 적용 단가 = Σ (월 단가 × 사육기간 중 그 달에 든 일수) ÷ 사육기간 전체 일수. 사육기간은 입식일부터 출하일까지, 두 날짜 모두 포함합니다. 보조금 = 적용 단가 × 출하 마릿수.</p>'+
     '<div class="memo-label" style="margin:6px 0 0">기타 비용</div>'+er+
     '<div class="cyc-btns"><button type="button" class="btn" data-act="se-add">+ 기타 비용 추가</button></div></section>'+
-    '<section class="card"><h2>월별 보조금 단가 (1~12월)</h2><p class="hint">매달 정해진 연료·깔짚 보조금 단가(원/마리)를 한 번만 입력해 두면 모든 입식 정산에 자동 적용됩니다. 위 계약 조건 표에는 이 입식의 사육 기간에 해당하는 달이 반영됩니다.</p>'+subHTML()+'</section>'+
     '<section class="card"><h2>예상 정산서</h2><div id="sdStmt"></div></section></div>';
 }
 function setSf(el,v){
@@ -2020,6 +2030,11 @@ function bind(){
   });
   document.addEventListener('change',function(e){
     var t=e.target;if(!t.matches)return;
+    if(t.dataset&&t.dataset.nsub){
+      var mm=t.dataset.nsub.split(':'),nv=numOrNull(t.value);
+      if(nv!==null&&(!isFinite(nv)||nv<0)){toast('숫자로 입력하세요');fillNSub();return;}
+      saveSub(mm[0],Number(mm[1]),nv);return;
+    }
     if(t.classList.contains('sfld')){settleChange(t);return;}
     if(t.id==='impFile'){if(t.files&&t.files.length)handleImpFiles(Array.prototype.slice.call(t.files));return;}
     if(t.name==='impPolicy'){if(S.imp){S.imp.policy=t.value;renderImp();}return;}
@@ -2138,6 +2153,7 @@ async function init(){
       if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
       S.sub=d.exists?d.data():null;
       if(S.tab==='settle')refreshSettle();
+      fillNSub();
     },function(e){});
   }catch(e){}}
   try{
