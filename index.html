@@ -1211,11 +1211,10 @@ function settleFormHTML(c){
     '<p class="hint">회사마다 다른 계약 조건을 이 입식에 맞게 넣으세요. 정산서가 바로 다시 계산됩니다.</p>'+
     mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('사료 단가','terms.feed','원/kg')+
     mf('친환경 보조금','terms.eco','원/마리')+mf('기타 보조금','terms.otherSub','원/마리')+
-    '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML()+
-    '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달</div>'+
+    '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달 <span class="hint">· 월별 단가는 입식 탭의 \'새 입식 등록\' 맨 아래(기타 보조금 밑)에서 입력</span></div>'+
     '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 (월별 단가 원/마리 · 사육일수로 가중평균)</div>'+
     '<div class="scroll"><table class="tbl mon"><thead><tr><th>월</th><th>기간 중 일수</th><th>연료 단가</th><th>깔짚 단가</th><th>반영 단가(연료+깔짚)</th></tr></thead><tbody>'+mrows+'</tbody></table></div>'+
-    '<p class="hint">월별 단가는 위 \'월별 보조금 단가\'에서 입력합니다. 적용 단가 = Σ (월 단가 × 사육기간 중 그 달에 든 일수) ÷ 사육기간 전체 일수. 사육기간은 입식일부터 출하일까지, 두 날짜 모두 포함합니다. 보조금 = 적용 단가 × 출하 마릿수.</p>'+
+    '<p class="hint">월별 단가는 입식 탭의 \'새 입식 등록\' 맨 아래 \'월별 보조금 단가\'에서 입력합니다. 적용 단가 = Σ (월 단가 × 사육기간 중 그 달에 든 일수) ÷ 사육기간 전체 일수. 사육기간은 입식일부터 출하일까지, 두 날짜 모두 포함합니다. 보조금 = 적용 단가 × 출하 마릿수.</p>'+
     '<div class="memo-label" style="margin:6px 0 0">기타 비용</div>'+er+
     '<div class="cyc-btns"><button type="button" class="btn" data-act="se-add">+ 기타 비용 추가</button></div></section>'+
     '<section class="card"><h2>예상 정산서</h2><div id="sdStmt"></div></section></div>';
