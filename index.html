@@ -398,6 +398,7 @@ function onCycles(snap,fromGet){
   }
   S.cycles=snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o;}).sort(function(a,b){return String(b.stockDate).localeCompare(String(a.stockDate));});
   S.ready=true;S.stale=false;S.cyclesDef=true;
+  if(!isOwner()&&S.cycles.length&&S.cycles[0].id!==S.cid){selectCycle(S.cycles[0].id);}
   try{lsSet('wl-cyc',JSON.stringify(S.cycles.slice(0,30)));}catch(e){}
   if(!cyc()){
     var pref=lsGet('wl-cid');var next=null;
