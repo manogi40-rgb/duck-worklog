@@ -765,8 +765,13 @@ function fillTerms(t){
     var m=t[f]||{};Object.keys(m).forEach(function(k){var e=document.querySelector('#nMon [data-nm="'+f+':'+k+'"]');if(e&&isNum(m[k]))e.value=String(m[k]);});
   });
 }
+var DEF_KEYS=[['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco'],['nOther','otherSub']];
+function fillFrom(t){
+  DEF_KEYS.forEach(function(x){var e=$(x[0]);if(e&&e.value===''&&isNum(t[x[1]]))e.value=String(t[x[1]]);});
+}
 async function prefillTerms(){
-  if(!S.db||S.editId||!isOwner())return;
+  if(!S.db||S.editId||!isOwner()||!S.defsLoaded)return;
+  if(S.defs&&DEF_KEYS.some(function(x){return isNum(S.defs[x[1]]);})){fillFrom(S.defs);return;}
   try{
     var r=await S.db.collection('settle').get(),best=null;
     r.docs.forEach(function(d){
@@ -775,9 +780,7 @@ async function prefillTerms(){
       if(!best||sd>best.sd)best={sd:sd,t:x.terms};
     });
     if(!best||S.editId)return;
-    [['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco'],['nOther','otherSub']].forEach(function(x){
-      var e=$(x[0]);if(e&&e.value===''&&isNum(best.t[x[1]]))e.value=String(best.t[x[1]]);
-    });
+    fillFrom(best.t);
   }catch(e){}
 }
 async function saveTermsFor(cid,terms){
@@ -800,7 +803,7 @@ function renderHome(){
       '<label class="nfield">비고(메모)<textarea class="nnote" id="nNote" maxlength="500" placeholder="예: 입식 업체, 사료 회사, 특이사항"></textarea></label>'+
       '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
       '<div class="memo-label" style="margin:10px 0 0">정산 단가 <span class="hint">(선택 · 정산 탭에 자동 적용, 나중에 고칠 수 있음)</span></div>'+
-      nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('사료 단가','nFeed','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('기타 보조금','nOther','원/마리')+
+      nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('사료 단가','nFeed','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('그 밖의 보조금(직접)','nOther','원/마리')+
       '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML('n')+'</div>'+
       '<div class="prev" id="nPrev" aria-live="polite"></div>'+
       '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
@@ -900,6 +903,14 @@ function saveCycle(){
   S.db.doc('cycles/'+id).get().then(function(sn){
     if(sn.exists)throw {code:'dup'};
     return S.db.doc('cycles/'+id).set({stockDate:date,total:t,heads:heads,note:note,serviceRate:SERVICE,expectedWeight:null,createdAt:Date.now()})
+      .then(function(){
+        if(isOwner()){
+          var dd=Object.assign({},S.defs||{});
+          DEF_KEYS.forEach(function(x){if(isNum(tr.terms[x[1]]))dd[x[1]]=tr.terms[x[1]];});
+          dd.updatedAt=Date.now();S.defs=dd;
+          S.db.doc('settings/defaults').set(dd).catch(function(){});
+        }
+      })
       .then(function(){return isOwner()&&Object.keys(tr.terms).length?S.db.doc('settle/'+id).set({c:id,terms:tr.terms}):null;});
   })
     .then(function(){
@@ -1078,6 +1089,35 @@ function nz(v){return isNum(v)?v:0;}
 function numOrNull(v){var r=String(v==null?'':v).trim().replace(/,/g,'');if(r==='')return null;var n=Number(r);return isFinite(n)?n:NaN;}
 function won(x){return fmt(Math.round(x))+'원';}
 function sdoc(){return S.settle||{};}
+var ASUB=[
+  {k:'hot',name:'혹서기 사육관리비지원',rate:200,desc:'출하일이 7/1~8/31'},
+  {k:'wfuel',name:'동절기 연료비지원',rate:150,desc:'입식일이 11/1~다음해 2/28, 이 기간 최대 2파트'},
+  {k:'annual',name:'동절기 사육농가 연중사육비지원',rate:50,desc:'입식일이 3/1~10/31'}
+];
+function asubJudge(c,k,shipDate){
+  var md=String(c.stockDate||'').slice(5),ok=null,why='';
+  if(k==='hot'){
+    if(!shipDate)return {ok:null,why:'출하일을 입력하면 판정합니다'};
+    var sm=shipDate.slice(5);ok=sm>='07-01'&&sm<='08-31';
+    why='출하일 '+dot(shipDate)+(ok?' → 7/1~8/31 해당':' → 7/1~8/31 아님');
+  }else if(k==='wfuel'){
+    var inW=md>='11-01'||md<='02-28';
+    if(!inW){ok=false;why='입식일 '+dot(c.stockDate)+' → 11/1~2/28 아님';}
+    else{
+      var key=function(x){var y=Number(String(x).slice(0,4)),m=Number(String(x).slice(5,7));return m>=11?y:y-1;};
+      var sk=key(c.stockDate);
+      var peers=S.cycles.filter(function(o){var m2=String(o.stockDate).slice(5);return (m2>='11-01'||m2<='02-28')&&key(o.stockDate)===sk;})
+        .sort(function(a,b){return String(a.stockDate).localeCompare(String(b.stockDate));});
+      var rank=0;peers.forEach(function(o,i){if(o.id===c.id)rank=i+1;});
+      ok=rank>=1&&rank<=2;
+      why='이 동절기 '+rank+'번째 입식'+(ok?'':' (최대 2파트까지)');
+    }
+  }else{
+    ok=md>='03-01'&&md<='10-31';
+    why='입식일 '+dot(c.stockDate)+(ok?' → 3/1~10/31 해당':' → 3/1~10/31 아님');
+  }
+  return {ok:ok,why:why};
+}
 function subv(kind,n){var m=S.sub&&S.sub[kind];return m?m[n]:undefined;}
 function monthKeys(c){
   var out=[],end=maxDateOf(c),cur=c.stockDate.slice(0,7);
@@ -1110,6 +1150,13 @@ function calcSettle(c){
   r.live=r.W*nz(tm.live);
   r.eco=nz(tm.eco)*(r.heads||0);
   r.other=nz(tm.otherSub)*(r.heads||0);
+  r.asub=ASUB.map(function(a){
+    var j=asubJudge(c,a.k,r.shipDate),mode=(d.asub&&d.asub[a.k])||'auto',ok=j.ok,why=j.why;
+    if(mode==='on'){ok=true;why+=' · 직접 적용으로 설정';}
+    else if(mode==='off'){ok=false;why+=' · 직접 미적용으로 설정';}
+    return {k:a.k,name:a.name,rate:a.rate,desc:a.desc,mode:mode,ok:ok,why:why,amt:ok?a.rate*(r.heads||0):0};
+  });
+  r.asubTotal=r.asub.reduce(function(x,a){return x+a.amt;},0);
   r.months=monthKeys(c).map(function(mk){
     var dim=dimOf(mk),days=periodDaysIn(mk,c,r.shipDate);
     var mn=Number(mk.slice(5,7)),gf=subv('fuel',mn),gl=subv('litter',mn);
@@ -1122,7 +1169,7 @@ function calcSettle(c){
   r.litterU=r.months.reduce(function(x,m){return x+m.lp;},0);
   r.fuel=r.fuelU*(r.heads||0);
   r.litter=r.litterU*(r.heads||0);
-  r.income=r.live+r.eco+r.other+r.fuel+r.litter;
+  r.income=r.live+r.eco+r.other+r.asubTotal+r.fuel+r.litter;
   r.chick=r.total*nz(tm.chick);
   r.feedCost=feed*nz(tm.feed);
   var etc=Array.isArray(d.etc)?d.etc:[];
@@ -1185,6 +1232,13 @@ function saveSub(kind,n,v){
     .then(function(){toast('저장됨');}).catch(function(e){handleErr(e);});
   refreshSettle();fillNSub();
 }
+function asubHTML(){
+  return ASUB.map(function(a){
+    return '<label class="sd-row" style="flex-wrap:wrap"><span>'+a.name+'<span class="s">'+a.rate+'원/마리 · '+a.desc+'</span></span>'+
+      '<select class="sfld" data-sk="asub:'+a.k+'" aria-label="'+a.name+' 적용 방식"><option value="auto">자동</option><option value="on">적용</option><option value="off">미적용</option></select></label>'+
+      '<p class="hint" id="asub-'+a.k+'" style="margin:-4px 0 6px"></p>';
+  }).join('');
+}
 function settleFormHTML(c){
   var d=sdoc(),sh=d.ship||{},ws=Array.isArray(sh.weights)?sh.weights:[],etc=Array.isArray(d.etc)?d.etc:[],mk=monthKeys(c);
   var veh=ws.map(function(w,i){
@@ -1210,7 +1264,8 @@ function settleFormHTML(c){
     '<section class="card"><div class="cardhead"><h2>계약 조건 (단가)</h2><button type="button" class="btn" data-act="st-copy">이전 입식 단가 복사</button></div>'+
     '<p class="hint">회사마다 다른 계약 조건을 이 입식에 맞게 넣으세요. 정산서가 바로 다시 계산됩니다.</p>'+
     mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('사료 단가','terms.feed','원/kg')+
-    mf('친환경 보조금','terms.eco','원/마리')+mf('기타 보조금','terms.otherSub','원/마리')+
+    mf('친환경 보조금','terms.eco','원/마리')+mf('그 밖의 보조금(직접 입력)','terms.otherSub','원/마리')+
+    '<div class="memo-label" style="margin:10px 0 0">기타 보조금 (조건에 따라 자동 적용)</div>'+asubHTML()+
     '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달 <span class="hint">· 월별 단가는 입식 탭의 \'새 입식 등록\' 맨 아래(기타 보조금 밑)에서 입력</span></div>'+
     '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 (월별 단가 원/마리 · 사육일수로 가중평균)</div>'+
     '<div class="scroll"><table class="tbl mon"><thead><tr><th>월</th><th>기간 중 일수</th><th>연료 단가</th><th>깔짚 단가</th><th>반영 단가(연료+깔짚)</th></tr></thead><tbody>'+mrows+'</tbody></table></div>'+
@@ -1235,6 +1290,11 @@ function refreshSettle(){
   for(var n=1;n<=12;n++){setSf(q('sub:fuel:'+n),subv('fuel',n));setSf(q('sub:litter:'+n),subv('litter',n));}
   etc.forEach(function(e,i){setSf(q('em:'+i),e&&e.memo);setSf(q('ea:'+i),e&&e.amt);});
   var r=calcSettle(c);
+  r.asub.forEach(function(a){
+    var sel=q('asub:'+a.k);if(sel&&document.activeElement!==sel)sel.value=a.mode;
+    var h=$('asub-'+a.k);
+    if(h)h.textContent=(a.ok===null?'판정 대기 · ':a.ok?'적용 +'+won(a.amt)+' · ':'미적용 · ')+a.why;
+  });
   $('sdWsum').textContent='차량 '+r.nVeh+'대 · 합계 '+fmtN(r.W)+' kg'+(r.heads&&r.W>0?' · 평균 출하 체중 '+(r.W/r.heads).toFixed(2)+' kg':'');
   var kp=function(l,v,sm){return '<div class="kpi"><span>'+l+'</span><b>'+v+'</b>'+(sm?'<small>'+sm+'</small>':'')+'</div>';};
   var dash='–';
@@ -1264,7 +1324,8 @@ function refreshSettle(){
     row('매출 (수입)','','','sec')+
     row('생체 대금',fmtN(r.W)+' kg × '+fmt(nz(tm.live))+'원',won(r.live),'',r.live)+
     row('친환경 보조금',ecoTxt,won(r.eco),'',r.eco)+
-    row('기타 보조금',fmt(r.heads||0)+'마리 × '+fmt(nz(tm.otherSub))+'원',won(r.other),'',r.other)+
+    row('그 밖의 보조금',fmt(r.heads||0)+'마리 × '+fmt(nz(tm.otherSub))+'원',won(r.other),'',r.other)+
+    r.asub.filter(function(a){return a.ok;}).map(function(a){return row(a.name,fmt(r.heads||0)+'마리 × '+a.rate+'원',won(a.amt),'',a.amt);}).join('')+
     row('연료 보조금',r.shipDate?'적용 단가 '+r.fuelU.toFixed(2)+'원 × '+fmt(r.heads||0)+'마리':'출하일 입력 후 계산',won(r.fuel),'',r.fuel)+
     row('깔짚 보조금',r.shipDate?'적용 단가 '+r.litterU.toFixed(2)+'원 × '+fmt(r.heads||0)+'마리':'출하일 입력 후 계산',won(r.litter),'',r.litter)+
     row('수입 합계','',won(r.income),'tot',r.income)+
@@ -1291,6 +1352,7 @@ function settleChange(t){
   var k=t.dataset.sk||'',v=t.value,m;
   var num=function(){var n=numOrNull(v);if(n!==null&&(!isFinite(n)||n<0)){toast('숫자로 입력하세요');refreshSettle();return {bad:true};}return {v:n};};
   if((m=k.match(/^sub:(fuel|litter):(\d+)$/))){var sv=num();if(sv.bad)return;saveSub(m[1],Number(m[2]),sv.v);return;}
+  if((m=k.match(/^asub:(hot|wfuel|annual)$/))){var ak=m[1];saveSettle(function(d){d.asub=d.asub||{};if(v==='auto')delete d.asub[ak];else d.asub[ak]=v;});return;}
   if(k==='ship.date'){saveSettle(function(d){d.ship=d.ship||{};d.ship.date=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';});return;}
   if(k==='ship.heads'){var a=num();if(a.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.heads=a.v;});return;}
   if(/^terms\.(live|chick|feed|eco|otherSub)$/.test(k)){var f=k.slice(6),b=num();if(b.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[f]=b.v;});return;}
@@ -2147,6 +2209,13 @@ async function init(){
       if(S.tab==='sensor'){refreshSensor();renderImp();}
     },function(e){});
   }catch(e){}
+  if(isOwner()){try{
+    S.db.doc('settings/defaults').onSnapshot(function(d){
+      if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
+      S.defs=d.exists?d.data():null;S.defsLoaded=true;
+      if($('homeForm')&&!S.editId)prefillTerms();
+    },function(e){S.defsLoaded=true;});
+  }catch(e){}}
   if(isOwner()){try{
     S.db.doc('settings/subsidy').onSnapshot(function(d){
       if(!d.exists&&d.metadata&&d.metadata.fromCache)return;
