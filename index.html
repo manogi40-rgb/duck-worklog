@@ -693,7 +693,7 @@ function renderAvg(){
   var now=initAll-cull-dead,fpp=now>0?feed/now:null,fcr=(w>0&&now>0)?feed/(now*w):null;
   var pct=function(x){return initAll>0?(x/initAll*100).toFixed(2)+'%':'–';};
   $('kpis').innerHTML=
-    '<div class="kpi"><span>현재 사육 마릿수</span><b>'+fmt(now)+'</b><small>입식(2% 포함) '+fmt(initAll)+'수 대비 <b style="display:inline;font-size:inherit">'+pct(now)+'</b></small></div>'+
+    '<div class="kpi"><span>현재 사육 마릿수</span><b>'+fmt(now)+'</b><small>서류 입식 '+fmt(Number(c.total)||0)+'수 대비 <b style="display:inline;font-size:inherit">'+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')+'</b> · 서비스 포함 '+fmt(initAll)+'수에서 시작</small></div>'+
     '<div class="kpi"><span>도태 누계</span><b>'+fmtN(cull)+'</b><small>'+pct(cull)+'</small></div>'+
     '<div class="kpi"><span>폐사 누계</span><b>'+fmtN(dead)+'</b><small>'+pct(dead)+'</small></div>'+
     '<div class="kpi"><span>도태+폐사 합산</span><b>'+fmtN(cull+dead)+'</b><small>'+pct(cull+dead)+'</small></div>'+
