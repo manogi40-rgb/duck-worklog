@@ -91,6 +91,8 @@ button,input,textarea{font:inherit;color:inherit}
 .tin,.hin{width:100%;height:46px;text-align:right;font-variant-numeric:tabular-nums}
 .hums{margin-top:8px}
 .works{display:flex;flex-wrap:wrap;align-items:center;gap:6px 16px;margin:10px 0 4px}
+.ftrow{display:flex;gap:16px;flex-wrap:wrap;padding:0 0 2px}
+.ftsum{color:var(--muted);font-size:13px;padding:0 0 6px}
 .ck{display:flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
 .ck input{width:24px;height:24px;margin:0}
 .hkl{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
@@ -290,6 +292,9 @@ var AREAS=[253,363,363,416,140];            /* 동별 면적: 배분 계산에�
 var SUM=AREAS.reduce(function(a,b){return a+b;},0);
 var SERVICE=0.02;
 var HOUSES=[1,2,3,4,5];
+var FT=[{k:'crumble',label:'크럼블'},{k:'early',label:'전기'},{k:'late',label:'후기'}];
+function ftLabel(k){var o=FT.filter(function(x){return x.k===k;})[0];return o?o.label:'';}
+function ftKey(k){return ftLabel(k)?k:'none';}
 var TYPES=[{k:'cull',label:'도태',int:true},{k:'dead',label:'폐사',int:true},{k:'feed',label:'사료 입고',int:false}];
 var FIELDS=[{f:'tm',w:'tm',label:'아침'},{f:'tn',w:'tn',label:'점심'},{f:'te',w:'te',label:'저녁'}];
 var HFIELDS=[{f:'hm',w:'tm',label:'아침'},{f:'hn',w:'tn',label:'점심'},{f:'he',w:'te',label:'저녁'}];
@@ -343,11 +348,12 @@ function allocate(total){
 
 /* ---------- 집계 ---------- */
 function agg(){
-  var out={tot:{},byDate:{},dates:new Set()};
+  var out={tot:{},byDate:{},dates:new Set(),ft:{crumble:0,early:0,late:0,none:0}};
   HOUSES.forEach(function(h){out.tot[h]={cull:0,dead:0,feed:0};});
   S.entries.forEach(function(e){
     var h=e.h;if(!out.tot[h])return;var q=Number(e.q)||0;
     out.tot[h][e.t]+=q;
+    if(e.t==='feed')out.ft[ftKey(e.ft)]+=q;
     var d=out.byDate[e.d]||(out.byDate[e.d]={});
     var x=d[h]||(d[h]={cull:0,dead:0,feed:0});x[e.t]+=q;out.dates.add(e.d);
   });
@@ -453,10 +459,11 @@ function loadCycles(n){
 }
 
 /* ---------- 쓰기 ---------- */
-function addEntry(h,t,q,inp,raw){
+function addEntry(h,t,q,inp,raw,ft){
   if(!S.db||!S.cid||!S.canWrite)return;
   if(overAge()){toast('7주령(49일령)까지만 입력할 수 있습니다');if(inp&&!inp.value)inp.value=raw;return;}
-  S.db.collection('entries').add({c:S.cid,d:S.date,h:h,t:t,q:q,by:S.uid||null,at:Date.now()})
+  var ent={c:S.cid,d:S.date,h:h,t:t,q:q,by:S.uid||null,at:Date.now()};if(t==='feed'&&ft)ent.ft=ft;
+  S.db.collection('entries').add(ent)
     .then(function(){toast('저장됨');})
     .catch(function(e){if(inp&&!inp.value)inp.value=raw;handleErr(e);});
 }
@@ -517,9 +524,12 @@ function updateRO(){
 /* 입력 탭 */
 function cardHTML(h){
   var rows=TYPES.map(function(t){
+    var ftb=t.k==='feed'?'<div class="ftrow" role="radiogroup" aria-label="'+h+'동 사료 종류">'+FT.map(function(f){
+      return '<label class="ck"><input type="radio" name="ft'+h+'" value="'+f.k+'" data-ft="1">'+f.label+'</label>';
+    }).join('')+'</div><div class="ftsum" data-ftsum></div>':'';
     return '<div class="row"><div class="row-label"><span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
-      '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>';
+      '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
   }).join('');
   var temps=FIELDS.map(function(x){
     return '<label>'+x.label+' ℃<input class="tin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="–"></label>';
@@ -557,10 +567,11 @@ function setVal(inp,v){
 function refreshInput(){
   var c=cyc(),A=agg(),pane=$('pane-input');
   /* 선택한 날짜까지(입식일~그날)만 누적: 이후 날짜의 입력은 제외 */
-  var CUM={};HOUSES.forEach(function(h){CUM[h]={cull:0,dead:0,feed:0};});
+  var CUM={},CUMF={},CUMT={crumble:0,early:0,late:0,none:0};HOUSES.forEach(function(h){CUM[h]={cull:0,dead:0,feed:0};CUMF[h]={crumble:0,early:0,late:0,none:0};});
   S.entries.forEach(function(e){
     if(!e||!CUM[e.h]||!CUM[e.h].hasOwnProperty(e.t)||String(e.d)>S.date)return;
     CUM[e.h][e.t]+=Number(e.q)||0;
+    if(e.t==='feed'){var fk=ftKey(e.ft);CUMF[e.h][fk]+=Number(e.q)||0;CUMT[fk]+=Number(e.q)||0;}
   });
   var nowAll=0,initAll=0,tdC=0,tdD=0,tdF=0;
   HOUSES.forEach(function(h){
@@ -574,6 +585,8 @@ function refreshInput(){
     TYPES.forEach(function(t){
       card.querySelector('[data-sum="'+t.k+'"]').textContent='오늘 '+fmtN(day[t.k])+' · 누계 '+fmtN(tot[t.k])+(t.k==='feed'?' kg':'');
     });
+    var fs=card.querySelector('[data-ftsum]');
+    if(fs){var cf=CUMF[h];fs.textContent='누계  '+FT.map(function(f){return f.label+' '+fmtN(cf[f.k]);}).join(' · ')+(cf.none?' · 미지정 '+fmtN(cf.none):'')+' · 합 '+fmtN(tot.feed)+' kg';}
     var dd=dayDoc(S.cid,S.date,h)||{};
     ALLF.forEach(function(x){setVal(card.querySelector('[data-f="'+x.f+'"]'),dd[x.f]);});
     var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
@@ -588,7 +601,7 @@ function refreshInput(){
       var lab=TYPES.filter(function(t){return t.k===x.e.t;})[0];
       var q=Number(x.e.q)||0;
       var tm=x.e.at?new Date(x.e.at).toLocaleTimeString('ko-KR',{timeZone:'Asia/Seoul',hour:'2-digit',minute:'2-digit',hour12:false}):'';
-      return '<span class="chip'+(q<0?' neg':'')+'">'+esc(lab?lab.label:x.e.t)+' '+(q>0?'+':'')+fmtN(q)+'<small>'+tm+'</small>'+
+      return '<span class="chip'+(q<0?' neg':'')+'">'+esc(lab?lab.label:x.e.t)+(x.e.t==='feed'&&ftLabel(x.e.ft)?'('+ftLabel(x.e.ft)+')':'')+' '+(q>0?'+':'')+fmtN(q)+'<small>'+tm+'</small>'+
         '<button type="button" data-del="'+esc(x.id)+'" aria-label="이 입력 취소">✕</button></span>';
     }).join('');
   });
@@ -596,7 +609,8 @@ function refreshInput(){
   var cnt=(od&&FIELDS.some(function(f){return isNum(od[f.f]);}))?'<span>외부 <b>'+FIELDS.map(function(f){return fmtT(od[f.f]);}).join(' · ')+'</b> ℃</span>':'';
   if(od&&HFIELDS.some(function(f){return isNum(od[f.f]);}))cnt+='<span>외부 습도 <b>'+HFIELDS.map(function(f){return fmtT(od[f.f]);}).join(' · ')+'</b> %</span>';
   $('sumline').innerHTML='<span class="hint">입력은 '+MAXAGE+'일령(7주령, '+dot(maxDateOf(c))+')까지</span><span>전체 '+dot(S.date)+' 기준 <b>'+fmt(nowAll)+'</b>수 / 입식 '+fmt(initAll)+'수</span>'+
-    '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+cnt;
+    '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+
+    '<span>사료 누계 '+FT.map(function(f){return f.label+' <b>'+fmtN(CUMT[f.k])+'</b>';}).join(' · ')+(CUMT.none?' · 미지정 <b>'+fmtN(CUMT.none)+'</b>':'')+' · 총 <b>'+fmtN(CUMT.crumble+CUMT.early+CUMT.late+CUMT.none)+'</b> kg</span>'+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
 }
 
@@ -685,7 +699,9 @@ function renderAvg(){
     '<div class="kpi"><span>도태+폐사 합산</span><b>'+fmtN(cull+dead)+'</b><small>'+pct(cull+dead)+'</small></div>'+
     '<div class="kpi"><span>로터리</span><b>'+WT.rot+'<small> 회</small></b></div>'+
     '<div class="kpi"><span>왕겨</span><b>'+WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small></b></div>'+
-    '<div class="kpi"><span>사료 입고 누계</span><b>'+fmtN(feed)+'<small> kg</small></b></div>'+
+    '<div class="kpi"><span>사료 입고 총합산</span><b>'+fmtN(feed)+'<small> kg</small></b></div>'+
+    FT.map(function(f){return '<div class="kpi"><span>'+f.label+' 합산</span><b>'+fmtN(A.ft[f.k])+'<small> kg</small></b></div>';}).join('')+
+    (A.ft.none?'<div class="kpi"><span>종류 미지정 합산</span><b>'+fmtN(A.ft.none)+'<small> kg</small></b></div>':'')+
     '<div class="kpi"><span>마리당 사료</span><b>'+(fpp==null?'–':fpp.toFixed(2))+'<small> kg</small></b></div>'+
     '<div class="kpi"><span>사료요구율</span><b>'+(fcr==null?'–':fcr.toFixed(2))+'</b>'+(w>0?'':'<small>예상 중량을 입력하세요</small>')+'</div>'+
     '<div class="kpi wide"><span>평균 온도 (아침 · 점심 · 저녁)</span><b>'+fmtT(mean(T.tm))+' · '+fmtT(mean(T.tn))+' · '+fmtT(mean(T.te))+'<small> ℃</small></b></div>'+
@@ -743,7 +759,7 @@ function renderNMonths(){
 function readTerms(){
   var out={},bad=false;
   var one=function(id,k){var v=numOrNull($(id).value);if(v!==null&&(!isFinite(v)||v<0)){bad=true;return;}if(v!==null)out[k]=v;};
-  one('nLive','live');one('nChick','chick');one('nFeed','feed');one('nEco','eco');one('nOther','otherSub');
+  one('nLive','live');one('nChick','chick');one('nFeed','feed');one('nFeedLate','feedLate');one('nEco','eco');one('nOther','otherSub');
   var fu={},li={};
   document.querySelectorAll('#nMon [data-nm]').forEach(function(e){
     var m=e.dataset.nm.split(':'),v=numOrNull(e.value);
@@ -754,18 +770,18 @@ function readTerms(){
   return {terms:out,bad:bad};
 }
 function clearTerms(){
-  ['nLive','nChick','nFeed','nEco','nOther'].forEach(function(id){var e=$(id);if(e)e.value='';});
+  ['nLive','nChick','nFeed','nFeedLate','nEco','nOther'].forEach(function(id){var e=$(id);if(e)e.value='';});
   var tb=$('nMon');if(tb)tb.innerHTML='';renderNMonths();
 }
 function fillTerms(t){
   t=t||{};
-  [['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco'],['nOther','otherSub']].forEach(function(x){var e=$(x[0]);if(e)e.value=isNum(t[x[1]])?String(t[x[1]]):'';});
+  [['nLive','live'],['nChick','chick'],['nFeed','feed'],['nFeedLate','feedLate'],['nEco','eco'],['nOther','otherSub']].forEach(function(x){var e=$(x[0]);if(e)e.value=isNum(t[x[1]])?String(t[x[1]]):'';});
   renderNMonths();
   ['fuel','litter'].forEach(function(f){
     var m=t[f]||{};Object.keys(m).forEach(function(k){var e=document.querySelector('#nMon [data-nm="'+f+':'+k+'"]');if(e&&isNum(m[k]))e.value=String(m[k]);});
   });
 }
-var DEF_KEYS=[['nLive','live'],['nChick','chick'],['nFeed','feed'],['nEco','eco'],['nOther','otherSub']];
+var DEF_KEYS=[['nLive','live'],['nChick','chick'],['nFeed','feed'],['nFeedLate','feedLate'],['nEco','eco'],['nOther','otherSub']];
 function fillFrom(t){
   DEF_KEYS.forEach(function(x){var e=$(x[0]);if(e&&e.value===''&&isNum(t[x[1]]))e.value=String(t[x[1]]);});
 }
@@ -803,7 +819,7 @@ function renderHome(){
       '<label class="nfield">비고(메모)<textarea class="nnote" id="nNote" maxlength="500" placeholder="예: 입식 업체, 사료 회사, 특이사항"></textarea></label>'+
       '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
       '<div class="memo-label" style="margin:10px 0 0">정산 단가 <span class="hint">(선택 · 정산 탭에 자동 적용, 나중에 고칠 수 있음)</span></div>'+
-      nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('사료 단가','nFeed','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('그 밖의 보조금(직접)','nOther','원/마리')+
+      nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('전기·크럼블 사료 단가','nFeed','원/kg')+nrow('후기 사료 단가','nFeedLate','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('그 밖의 보조금(직접)','nOther','원/마리')+
       '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML('n')+'</div>'+
       '<div class="prev" id="nPrev" aria-live="polite"></div>'+
       '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
@@ -1142,7 +1158,7 @@ function calcSettle(c){
   r.shipDate=/^\d{4}-\d{2}-\d{2}$/.test(sh.date||'')&&sh.date>=c.stockDate?sh.date:null;
   r.age=r.shipDate?ageOf(c,r.shipDate):null;
   var A=agg(),feed=0;HOUSES.forEach(function(h){feed+=A.tot[h].feed;});
-  r.feed=feed;r.total=Number(c.total)||0;
+  r.ft=A.ft;r.feed=feed;r.total=Number(c.total)||0;
   r.surv=(r.heads&&r.total>0)?r.heads/r.total*100:null;
   r.avgW=(r.heads&&r.W>0)?r.W/r.heads:null;
   r.fph=r.heads?feed/r.heads:null;
@@ -1171,7 +1187,9 @@ function calcSettle(c){
   r.litter=r.litterU*(r.heads||0);
   r.income=r.live+r.eco+r.other+r.asubTotal+r.fuel+r.litter;
   r.chick=r.total*nz(tm.chick);
-  r.feedCost=feed*nz(tm.feed);
+  r.pEarly=nz(tm.feed);r.lateFall=!isNum(tm.feedLate);r.pLate=r.lateFall?r.pEarly:tm.feedLate;
+  r.kgEarly=A.ft.crumble+A.ft.early;r.kgLate=A.ft.late;r.kgNone=A.ft.none;
+  r.feedCost=(r.kgEarly+r.kgNone)*r.pEarly+r.kgLate*r.pLate;
   var etc=Array.isArray(d.etc)?d.etc:[];
   r.etc=etc.reduce(function(x,e){return x+nz(e&&e.amt);},0);
   r.cost=r.chick+r.feedCost+r.etc;
@@ -1263,7 +1281,7 @@ function settleFormHTML(c){
     '<section class="card"><h2>출하 성적</h2><div class="kpis" id="sdPerf"></div></section>'+
     '<section class="card"><div class="cardhead"><h2>계약 조건 (단가)</h2><button type="button" class="btn" data-act="st-copy">이전 입식 단가 복사</button></div>'+
     '<p class="hint">회사마다 다른 계약 조건을 이 입식에 맞게 넣으세요. 정산서가 바로 다시 계산됩니다.</p>'+
-    mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('사료 단가','terms.feed','원/kg')+
+    mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('전기·크럼블 사료 단가','terms.feed','원/kg')+mf('후기 사료 단가','terms.feedLate','원/kg')+
     mf('친환경 보조금','terms.eco','원/마리')+mf('그 밖의 보조금(직접 입력)','terms.otherSub','원/마리')+
     '<div class="memo-label" style="margin:10px 0 0">기타 보조금 (조건에 따라 자동 적용)</div>'+asubHTML()+
     '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달 <span class="hint">· 월별 단가는 입식 탭의 \'새 입식 등록\' 맨 아래(기타 보조금 밑)에서 입력</span></div>'+
@@ -1286,7 +1304,7 @@ function refreshSettle(){
   var q=function(k){return document.querySelector('#sdForm [data-sk="'+k+'"]');};
   setSf(q('ship.date'),sh.date||'');setSf(q('ship.heads'),sh.heads);
   ws.forEach(function(w,i){setSf(q('w:'+i),w);});
-  ['live','chick','feed','eco','otherSub'].forEach(function(k){setSf(q('terms.'+k),tm[k]);});
+  ['live','chick','feed','feedLate','eco','otherSub'].forEach(function(k){setSf(q('terms.'+k),tm[k]);});
   for(var n=1;n<=12;n++){setSf(q('sub:fuel:'+n),subv('fuel',n));setSf(q('sub:litter:'+n),subv('litter',n));}
   etc.forEach(function(e,i){setSf(q('em:'+i),e&&e.memo);setSf(q('ea:'+i),e&&e.amt);});
   var r=calcSettle(c);
@@ -1302,8 +1320,9 @@ function refreshSettle(){
     kp('출하 일령',r.age!=null?r.age+'<small> 일령</small>':dash,r.shipDate?dot(r.shipDate)+' 출하':'출하일을 입력하세요')+
     kp('육성율',r.surv!=null?r.surv.toFixed(2)+'<small> %</small>':dash,r.surv!=null?'출하 '+fmt(r.heads)+' ÷ 입식 '+fmt(r.total)+'(서류)':'출하 마릿수를 입력하세요')+
     kp('출하 마릿수',r.heads?fmt(r.heads):dash,r.heads?'입식 대비 '+fmt(r.heads-r.total)+'수':'')+
-    kp('출하 중량',r.W>0?fmtN(r.W)+'<small> kg</small>':dash,r.avgW?'평균 '+r.avgW.toFixed(2)+' kg/마리':'')+
-    kp('총 사료 입고',fmtN(r.feed)+'<small> kg</small>','입력 탭의 사료 입고 누계')+
+    kp('출하 중량',r.W>0?fmtN(r.W)+'<small> kg</small>':dash,'차량 '+r.nVeh+'대 합계')+
+    kp('출하 평체',r.avgW?r.avgW.toFixed(2)+'<small> kg</small>':dash,'출하 중량 ÷ 출하 마릿수')+
+    kp('총 사료 입고',fmtN(r.feed)+'<small> kg</small>','크럼블 '+fmtN(r.ft.crumble)+' · 전기 '+fmtN(r.ft.early)+' · 후기 '+fmtN(r.ft.late)+(r.ft.none?' · 미지정 '+fmtN(r.ft.none):''))+
     kp('출하 마리당 사료',r.fph!=null?r.fph.toFixed(2)+'<small> kg</small>':dash,'총 사료 ÷ 출하 마릿수')+
     kp('사료요구율',r.fcr!=null?r.fcr.toFixed(3):dash,'총 사료 ÷ 출하 중량');
   r.months.forEach(function(m){
@@ -1331,7 +1350,9 @@ function refreshSettle(){
     row('수입 합계','',won(r.income),'tot',r.income)+
     row('매입 (지출)','','','sec')+
     row('병아리 대금',fmt(r.total)+'마리(서류) × '+fmt(nz(tm.chick))+'원',won(r.chick),'',r.chick)+
-    row('사료 대금',fmtN(r.feed)+' kg × '+fmt(nz(tm.feed))+'원',won(r.feedCost),'',r.feedCost)+
+    row('사료 대금(크럼블·전기)',fmtN(r.kgEarly)+' kg × '+fmt(r.pEarly)+'원',won(r.kgEarly*r.pEarly),'',r.kgEarly*r.pEarly)+
+    row('사료 대금(후기)',fmtN(r.kgLate)+' kg × '+fmt(r.pLate)+'원'+(r.lateFall&&r.kgLate>0?' (후기 단가 미입력 → 전기 단가 적용)':''),won(r.kgLate*r.pLate),'',r.kgLate*r.pLate)+
+    (r.kgNone>0?row('사료 대금(종류 미지정)',fmtN(r.kgNone)+' kg × '+fmt(r.pEarly)+'원 (전기 단가 적용)',won(r.kgNone*r.pEarly),'',r.kgNone*r.pEarly):'')+
     (etcRows||row('기타 비용','',won(0),'',0))+
     row('지출 합계','',won(r.cost),'tot',r.cost)+
     row('예상 정산액','수입 합계 − 지출 합계',(r.net<0?'−':'')+won(Math.abs(r.net)),'net',r.net)+
@@ -1355,7 +1376,7 @@ function settleChange(t){
   if((m=k.match(/^asub:(hot|wfuel|annual)$/))){var ak=m[1];saveSettle(function(d){d.asub=d.asub||{};if(v==='auto')delete d.asub[ak];else d.asub[ak]=v;});return;}
   if(k==='ship.date'){saveSettle(function(d){d.ship=d.ship||{};d.ship.date=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';});return;}
   if(k==='ship.heads'){var a=num();if(a.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.heads=a.v;});return;}
-  if(/^terms\.(live|chick|feed|eco|otherSub)$/.test(k)){var f=k.slice(6),b=num();if(b.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[f]=b.v;});return;}
+  if(/^terms\.(live|chick|feed|feedLate|eco|otherSub)$/.test(k)){var f=k.slice(6),b=num();if(b.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[f]=b.v;});return;}
   if((m=k.match(/^w:(\d+)$/))){var i=Number(m[1]),c2=num();if(c2.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.weights=d.ship.weights||[];d.ship.weights[i]=c2.v;});return;}
   if((m=k.match(/^(fuel|litter):(\d{4}-\d{2})$/))){var kind=m[1],mk=m[2],e=num();if(e.bad)return;saveSettle(function(d){d.terms=d.terms||{};d.terms[kind]=d.terms[kind]||{};d.terms[kind][mk]=e.v;});return;}
   if((m=k.match(/^em:(\d+)$/))){var j=Number(m[1]);saveSettle(function(d){d.etc=d.etc||[];d.etc[j]=Object.assign({},d.etc[j]||{},{memo:v.trim()});});return;}
@@ -1371,7 +1392,7 @@ async function copyTerms(){
       if(!best||sd>best.sd)best={sd:sd,t:x.terms};
     });
     if(!best){toast('복사할 다른 입식의 단가가 없습니다');return;}
-    saveSettle(function(d){var t=Object.assign({},d.terms||{});['live','chick','feed','eco','otherSub'].forEach(function(k){if(best.t[k]!==undefined)t[k]=best.t[k];});d.terms=t;});
+    saveSettle(function(d){var t=Object.assign({},d.terms||{});['live','chick','feed','feedLate','eco','otherSub'].forEach(function(k){if(best.t[k]!==undefined)t[k]=best.t[k];});d.terms=t;});
     toast('이전 입식의 단가를 복사했습니다 (월별 보조금은 제외)');
   }catch(e){handleErr(e);}
 }
@@ -2109,6 +2130,11 @@ function bind(){
       if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedWeight:v}).then(function(){toast('저장됨');}).catch(handleErr);
       return;
     }
+    if(t.dataset&&t.dataset.ft){
+      var qi=t.closest('.house').querySelector('.qin[data-t="feed"]');
+      if(qi&&qi.value.trim())qi.dispatchEvent(new Event('change',{bubbles:true}));
+      return;
+    }
     if(t.classList.contains('qin')){
       var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
       var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
@@ -2117,8 +2143,14 @@ function bind(){
       var type=TYPES.filter(function(x){return x.k===t.dataset.t;})[0];
       q=type.int?Math.round(q):Math.round(q*10)/10;
       if(q===0){t.value='';return;}
+      var ftv=null;
+      if(t.dataset.t==='feed'){
+        var fr=t.closest('.house').querySelector('input[data-ft]:checked');
+        if(!fr){toast('사료 종류(크럼블·전기·후기)를 먼저 체크하세요');return;}
+        ftv=fr.value;fr.checked=false;
+      }
       t.value='';sg.classList.remove('neg');sg.textContent='+';sg.setAttribute('aria-pressed','false');
-      addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ);
+      addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ,ftv);
       return;
     }
     if(t.type==='checkbox'&&(t.dataset.f==='rot'||t.dataset.f==='hk')){
