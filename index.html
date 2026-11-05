@@ -1192,8 +1192,11 @@ function calcSettle(c){
   r.feedCost=(r.kgEarly+r.kgNone)*r.pEarly+r.kgLate*r.pLate;
   var etc=Array.isArray(d.etc)?d.etc:[];
   r.etc=etc.reduce(function(x,e){return x+nz(e&&e.amt);},0);
-  r.cost=r.chick+r.feedCost+r.etc;
+  r.jajoMode=(d.fc&&d.fc.jajo)||'on';r.jajoRate=10;
+  r.jajo=r.jajoMode==='off'?0:r.jajoRate*(r.heads||0);
+  r.cost=r.chick+r.feedCost+r.jajo+r.etc;
   r.net=r.income-r.cost;
+  r.netNoEtc=r.net+r.etc;
   return r;
 }
 var settleChain=Promise.resolve();
@@ -1284,6 +1287,8 @@ function settleFormHTML(c){
     mf('생체 단가','terms.live','원/kg')+mf('병아리 단가','terms.chick','원/마리')+mf('전기·크럼블 사료 단가','terms.feed','원/kg')+mf('후기 사료 단가','terms.feedLate','원/kg')+
     mf('친환경 보조금','terms.eco','원/마리')+mf('그 밖의 보조금(직접 입력)','terms.otherSub','원/마리')+
     '<div class="memo-label" style="margin:10px 0 0">기타 보조금 (조건에 따라 자동 적용)</div>'+asubHTML()+
+    '<div class="memo-label" style="margin:10px 0 0">고정 지출</div>'+
+    '<label class="sd-row" style="flex-wrap:wrap"><span>자조금<span class="s">출하 마리당 10원 · 지출에 고정 포함</span></span><select class="sfld" data-sk="fc:jajo" aria-label="자조금 적용 방식"><option value="on">적용</option><option value="off">미적용</option></select></label>'+
     '<div class="memo-label" style="margin:10px 0 0">이 입식에 반영되는 달 <span class="hint">· 월별 단가는 입식 탭의 \'새 입식 등록\' 맨 아래(기타 보조금 밑)에서 입력</span></div>'+
     '<div class="memo-label" style="margin:6px 0 0">연료·깔짚 보조금 (월별 단가 원/마리 · 사육일수로 가중평균)</div>'+
     '<div class="scroll"><table class="tbl mon"><thead><tr><th>월</th><th>기간 중 일수</th><th>연료 단가</th><th>깔짚 단가</th><th>반영 단가(연료+깔짚)</th></tr></thead><tbody>'+mrows+'</tbody></table></div>'+
@@ -1308,6 +1313,7 @@ function refreshSettle(){
   for(var n=1;n<=12;n++){setSf(q('sub:fuel:'+n),subv('fuel',n));setSf(q('sub:litter:'+n),subv('litter',n));}
   etc.forEach(function(e,i){setSf(q('em:'+i),e&&e.memo);setSf(q('ea:'+i),e&&e.amt);});
   var r=calcSettle(c);
+  var jsel=q('fc:jajo');if(jsel&&document.activeElement!==jsel)jsel.value=r.jajoMode;
   r.asub.forEach(function(a){
     var sel=q('asub:'+a.k);if(sel&&document.activeElement!==sel)sel.value=a.mode;
     var h=$('asub-'+a.k);
@@ -1338,7 +1344,7 @@ function refreshSettle(){
   var kp2=function(l,v,sm){return '<div class="kpi"><span>'+l+'</span><b>'+v+'</b>'+(sm?'<small>'+sm+'</small>':'')+'</div>';};
   $('sdStmt').innerHTML='<div class="kpis" style="margin-bottom:12px">'+
     kp2('예상 정산액 (총액)',(r.net<0?'−':'')+won(Math.abs(r.net)),'수입 − 지출')+
-    kp2('마리당 단가',r.heads?(r.net<0?'−':'')+won(Math.abs(r.net/r.heads)):'–',r.heads?'출하 '+fmt(r.heads)+'마리 기준':'출하 마릿수를 입력하세요')+'</div>'+
+    kp2('마리당 단가 (기타 비용 제외)',r.heads?(r.netNoEtc<0?'−':'')+won(Math.abs(r.netNoEtc/r.heads)):'–',r.heads?'출하 '+fmt(r.heads)+'마리 기준 · 기타 비용 '+won(r.etc)+' 미반영':'출하 마릿수를 입력하세요')+'</div>'+
     '<div class="scroll"><table class="tbl stmt"><thead><tr><th>항목</th><th>금액</th><th>마리당</th></tr></thead><tbody>'+
     row('매출 (수입)','','','sec')+
     row('생체 대금',fmtN(r.W)+' kg × '+fmt(nz(tm.live))+'원',won(r.live),'',r.live)+
@@ -1353,9 +1359,10 @@ function refreshSettle(){
     row('사료 대금(크럼블·전기)',fmtN(r.kgEarly)+' kg × '+fmt(r.pEarly)+'원',won(r.kgEarly*r.pEarly),'',r.kgEarly*r.pEarly)+
     row('사료 대금(후기)',fmtN(r.kgLate)+' kg × '+fmt(r.pLate)+'원'+(r.lateFall&&r.kgLate>0?' (후기 단가 미입력 → 전기 단가 적용)':''),won(r.kgLate*r.pLate),'',r.kgLate*r.pLate)+
     (r.kgNone>0?row('사료 대금(종류 미지정)',fmtN(r.kgNone)+' kg × '+fmt(r.pEarly)+'원 (전기 단가 적용)',won(r.kgNone*r.pEarly),'',r.kgNone*r.pEarly):'')+
+    (r.jajoMode==='off'?'':row('자조금',fmt(r.heads||0)+'마리 × '+r.jajoRate+'원',won(r.jajo),'',r.jajo))+
     (etcRows||row('기타 비용','',won(0),'',0))+
     row('지출 합계','',won(r.cost),'tot',r.cost)+
-    row('예상 정산액','수입 합계 − 지출 합계',(r.net<0?'−':'')+won(Math.abs(r.net)),'net',r.net)+
+    row('예상 정산액','수입 합계 − 지출 합계 · 마리당은 기타 비용 제외',(r.net<0?'−':'')+won(Math.abs(r.net)),'net',r.netNoEtc)+
     (r.W>0?'<tr><td>생체 kg당</td><td>'+(r.net<0?'−':'')+won(Math.abs(r.net/r.W))+'</td><td></td></tr>':'')+
     '</tbody></table></div>'+
     '<p class="hint">병아리 대금은 서류상 입식 마릿수 기준입니다. 사료 대금은 입고한 사료 전체를 기준으로 하며 남은 사료는 반영하지 않습니다. 예상치이므로 실제 정산서와 다를 수 있습니다.</p>';
@@ -1373,6 +1380,7 @@ function settleChange(t){
   var k=t.dataset.sk||'',v=t.value,m;
   var num=function(){var n=numOrNull(v);if(n!==null&&(!isFinite(n)||n<0)){toast('숫자로 입력하세요');refreshSettle();return {bad:true};}return {v:n};};
   if((m=k.match(/^sub:(fuel|litter):(\d+)$/))){var sv=num();if(sv.bad)return;saveSub(m[1],Number(m[2]),sv.v);return;}
+  if(k==='fc:jajo'){saveSettle(function(d){d.fc=d.fc||{};if(v==='on')delete d.fc.jajo;else d.fc.jajo=v;});return;}
   if((m=k.match(/^asub:(hot|wfuel|annual)$/))){var ak=m[1];saveSettle(function(d){d.asub=d.asub||{};if(v==='auto')delete d.asub[ak];else d.asub[ak]=v;});return;}
   if(k==='ship.date'){saveSettle(function(d){d.ship=d.ship||{};d.ship.date=/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';});return;}
   if(k==='ship.heads'){var a=num();if(a.bad)return;saveSettle(function(d){d.ship=d.ship||{};d.ship.heads=a.v;});return;}
