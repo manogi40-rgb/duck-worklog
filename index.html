@@ -1442,13 +1442,13 @@ function renderSensor(){
     }).join('');
     pane.innerHTML=
       '<section class="card"><h2>센서 온도·습도 불러오기</h2>'+
-      '<p class="hint">센서 앱에서 내보낸 엑셀 파일(.xls)을 올리면 날짜별 아침·점심·저녁 온도와 습도 평균을 계산해 동별 온도·습도 칸에 넣습니다. 동 하나에 센서가 여러 개면 값을 합쳐 평균합니다. 여러 파일을 한꺼번에 선택할 수 있습니다.</p>'+
+      '<p class="hint">센서 앱에서 내보낸 엑셀 파일(.xls)을 올리면 날짜별로 온도(아침은 최저, 점심·저녁은 최고)와 습도(평균)를 계산해 동별 온도·습도 칸에 넣습니다. 동 하나에 센서가 여러 개면 같은 시각의 값을 합쳐 평균한 뒤 계산합니다. 여러 파일을 한꺼번에 선택할 수 있습니다.</p>'+
       '<div class="cyc-btns"><button type="button" class="btn primary" data-act="imp-pick">파일 선택</button></div>'+
       '<input type="file" id="impFile" multiple accept=".xls,.xlsx,.csv" hidden><div id="impOut"></div></section>'+
       '<section class="card" id="sensorPane"><h2>센서 번호</h2>'+
       '<p class="hint">번호는 내보낸 파일 이름 맨 앞의 12자리입니다. 예: F0C69E4D115A. 외부는 축사 밖 온도 센서입니다. 센서를 교체하면 해당 칸의 번호를 새 번호로 바꾸세요. 바꾸는 즉시 저장됩니다.</p>'+rows+'</section>'+
-      '<section class="card"><h2>평균 시간대</h2>'+
-      '<p class="hint">시작 시각 이상, 끝 시각 미만의 값을 평균합니다. 예: 3 ~ 6은 03:00부터 05:59까지입니다.</p>'+wrows+
+      '<section class="card"><h2>측정 시간대</h2>'+
+      '<p class="hint">시작 시각 이상, 끝 시각 미만의 값을 봅니다. 온도는 아침 시간대의 최저점, 점심·저녁 시간대의 최고점이고 습도는 평균입니다. 예: 3 ~ 6은 03:00부터 05:59까지입니다.</p>'+wrows+
       '<p class="err" id="sErr" hidden></p></section>';
     S.imp=S.imp||null;
   }
@@ -1517,7 +1517,7 @@ function parseSheet(buf){
   });
   return out;
 }
-/* 집계: 동별·날짜별로 시간대 평균. 구간의 70% 미만만 기록된 시간대는 건너뜀 */
+/* 집계: 동별·날짜별 시간대 값(온도 아침 최저·점심/저녁 최고, 습도 평균). 구간의 70% 미만만 기록된 시간대는 건너뜀 */
 function aggregateRows(rows,win,minDate){
   var seen={},by={};
   rows.forEach(function(r){
@@ -1534,7 +1534,10 @@ function aggregateRows(rows,win,minDate){
       var st=win[k][0]*60,en=win[k][1]*60;
       var pts=dd.pts.filter(function(p){return p.m>=st&&p.m<en;});
       var need=(en-st)*nS,c=need>0?pts.length/need:0;cov[k]=c;
-      vals[WKEY[k]]=(c>=0.7&&pts.length)?Math.round(mean(pts.map(function(p){return p.v;}))*10)/10:null;
+      /* 온도: 같은 시각에 센서가 여럿이면 평균해 동의 값으로 보고, 아침은 최저점·점심과 저녁은 최고점 */
+      var bm={};pts.forEach(function(p){(bm[p.m]||(bm[p.m]=[])).push(p.v);});
+      var hv2=Object.keys(bm).map(function(mm){return mean(bm[mm]);});
+      vals[WKEY[k]]=(c>=0.7&&hv2.length)?Math.round((k==='m'?Math.min.apply(null,hv2):Math.max.apply(null,hv2))*10)/10:null;
       var hp=pts.filter(function(p){return p.hv!=null;});
       vals[HKEY[k]]=(need>0&&hp.length/need>=0.7)?Math.round(mean(hp.map(function(p){return p.hv;}))*10)/10:null;
     });
