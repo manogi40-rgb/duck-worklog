@@ -1684,7 +1684,12 @@ function houseSeries(c){
   return series;
 }
 /* 입식(파트)별 겹쳐보기 */
-function cycLabel(c){return c.stockDate.slice(2).replace(/-/g,'.')+' 입식';}
+function cycLabel(c){
+  var sm=(S.shipMap||{})[c.id],sd=(sm&&sm.date)||null;
+  if(!sd||sd<c.stockDate){var si=shipOf(c.id);sd=(si&&si.date&&si.date>=c.stockDate)?si.date:null;}
+  var a=sd?ageOf(c,sd):ageOf(c,todayStr()),t=sd?a+'일령 출하':(a>=1?a+'일령':'입식 전');
+  return c.stockDate.slice(2).replace(/-/g,'.')+' 입식 · '+t;
+}
 function shipFrom(doc){
   var sh=doc&&doc.ship;if(!sh)return null;
   var ws=(Array.isArray(sh.weights)?sh.weights:[]).filter(isNum),W=ws.reduce(function(x,y){return x+y;},0);
@@ -1713,11 +1718,11 @@ function cycTotals(c,src,hs){
 /* 마리당 사료(일별): 사료를 입고한 날부터 다음 입고 전날까지, 입고량을 날수로 나눠 그날 마릿수로 나눈다.
    마지막 입고는 출하일까지(출하일 포함) 쓴 것으로 본다. 출하 정보가 없으면 마지막 구간은 그리지 않는다. */
 function fppDaily(c,T,si){
-  var pts=[],fd=Object.keys(T.by).filter(function(d){return T.by[d].feed>0;}).sort();
+  var pts=[],fd=Object.keys(T.by).filter(function(d){return T.by[d].feed!==0;}).sort();
   var endDay=(si&&si.date)?si.date:null;
   if(endDay)fd=fd.filter(function(d){return d<=endDay;});
   if(!fd.length)return pts;
-  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0,cum=0;
+  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0,cumF=0;
   var headsAt=function(d){
     while(idx<dn.length&&dn[idx]<=d){run.cull+=T.by[dn[idx]].cull;run.dead+=T.by[dn[idx]].dead;idx++;}
     return T.init-run.cull-run.dead;
@@ -1732,7 +1737,8 @@ function fppDaily(c,T,si){
     var days=b-a+1,per=qty/days;
     for(var n=a;n<=b;n++){
       var d=isoDay(n),now=headsAt(d);
-      if(now>0){cum+=per/now;pts.push({x:ageOf(c,d)+0.5,y:cum,s:per/now,d:d,a:ageOf(c,d),lab:''});}
+      cumF+=per;
+      if(now>0){pts.push({x:ageOf(c,d)+0.5,y:cumF/now,s:per/now,d:d,a:ageOf(c,d),lab:''});}
     }
   }
   return pts;
