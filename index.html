@@ -493,8 +493,9 @@ function renderHeader(){
   var sn=$('syncNote');if(sn)sn.hidden=!(S.cid&&S.ready&&(S.stale||(S.db&&!(S.sync.e&&S.sync.d))));
   if(!c){$('cycTitle').textContent=S.ready?'입식을 등록하세요':'작업일지';$('cycAge').hidden=true;return;}
   $('cycTitle').textContent=dot(c.stockDate)+' 입식';
-  var a=ageOf(c,S.date);
-  $('cycAge').hidden=a<1;$('cycAge').textContent=a+'일령';
+  var a=ageOf(c,S.date),sm=(S.shipMap||{})[c.id],sd=(sm&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||'')&&sm.date>=c.stockDate)?sm.date:null;
+  if(sd){$('cycAge').hidden=false;$('cycAge').textContent=ageOf(c,sd)+'일령 출하';}
+  else{$('cycAge').hidden=a<1;$('cycAge').textContent=a+'일령';}
 }
 function render(){
   if(!isOwner()&&(S.tab==='home'||S.tab==='sensor'||S.tab==='settle'))S.tab='input';
@@ -1641,7 +1642,7 @@ async function applyImp(){
 var SER_ORDER=[1,2,3,4,5,0];
 var MET={temp:{k:'temp',label:'온도',unit:'℃'},humi:{k:'humi',label:'습도',unit:'%'},dead:{k:'dead',label:'폐사',unit:'마리'},cull:{k:'cull',label:'도태',unit:'마리'},
   loss:{k:'loss',label:'폐사+도태',unit:'마리'},
-  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리/일'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율(출하)',unit:''}};
+  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율(출하)',unit:''}};
 var MET_H=['temp','humi','dead','cull','loss','feed'],MET_C=['temp','humi','dead','cull','loss','feed','fpp','drate','fcr'];
 function lossOf(o){return (o?(Number(o.dead)||0)+(Number(o.cull)||0):0);}
 var GH=null;
@@ -1716,7 +1717,7 @@ function fppDaily(c,T,si){
   var endDay=(si&&si.date)?si.date:null;
   if(endDay)fd=fd.filter(function(d){return d<=endDay;});
   if(!fd.length)return pts;
-  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0;
+  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0,cum=0;
   var headsAt=function(d){
     while(idx<dn.length&&dn[idx]<=d){run.cull+=T.by[dn[idx]].cull;run.dead+=T.by[dn[idx]].dead;idx++;}
     return T.init-run.cull-run.dead;
@@ -1731,7 +1732,7 @@ function fppDaily(c,T,si){
     var days=b-a+1,per=qty/days;
     for(var n=a;n<=b;n++){
       var d=isoDay(n),now=headsAt(d);
-      if(now>0)pts.push({x:ageOf(c,d)+0.5,y:per/now,d:d,a:ageOf(c,d),lab:''});
+      if(now>0){cum+=per/now;pts.push({x:ageOf(c,d)+0.5,y:cum,s:per/now,d:d,a:ageOf(c,d),lab:''});}
     }
   }
   return pts;
@@ -1836,7 +1837,6 @@ function cycSummaryHTML(){
     ['현재 마릿수',function(x){return fmt(x.now);}],
     ['사료 입고 누계 (kg)',function(x){return fmtN(x.T.tot.feed);}],
     ['마리당 사료 누계 (kg)',function(x){return x.now>0?(x.T.tot.feed/x.now).toFixed(2):'–';}],
-    ['마리당 사료 일평균 (kg/일)',function(x){var pp=fppDaily(x.c,x.T,x.si);return pp.length?(pp.reduce(function(a,b){return a+b.y;},0)/pp.length).toFixed(3):'–';}],
     ['출하일령',function(x){return (x.si&&x.si.date)?ageOf(x.c,x.si.date)+'일령':'–';}],
     ['출하 중량 (kg)',function(x){return x.w>0?fmtN(x.w):'–';}],
     ['사료요구율 (출하 기준)',function(x){return (x.w>0&&x.fk>0)?(x.fk/x.w).toFixed(2):'–';}]
@@ -1855,7 +1855,8 @@ function niceTicks(lo,hi,n){
   for(var v=Math.floor(lo/step)*step;v<=Math.ceil(hi/step)*step+step*1e-6;v+=step)out.push(Number(v.toFixed(dec)));
   return {ticks:out,dec:dec};
 }
-function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):m.k==='fpp'?v.toFixed(3):(m.k==='drate'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
+function gSub(p){return (p&&p.s!=null)?' ('+p.s.toFixed(3)+')':'';}
+function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):(m.k==='fpp'||m.k==='drate'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
 function renderGraph(){
   var pane=$('pane-graph'),c=cyc(),g=S.g;
   if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);GH=null;return;}
@@ -1884,7 +1885,7 @@ function renderGraph(){
     }).join('')+'</div>';
   }
   var loading=cm&&series.some(function(s){return s.loading;});
-  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리/일 · 사료 입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수 (마지막 입고는 출하일까지, 출하 정보가 없으면 표시 안 함)':m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 하루 3점은 아침·점심·저녁 평균':'')+
+  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리 · 하루하루 누적 사료. 괄호 안은 그날 하루치(입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수). 마지막 입고는 출하일까지, 출하 정보가 없으면 그 뒤는 표시 안 함':m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 하루 3점은 아침·점심·저녁 평균':'')+
     (g.metric==='temp'?' · 센서 탭에서 불러온 온도와 직접 입력한 온도':g.metric==='humi'?' · 센서 탭에서 불러온 습도와 직접 입력한 습도':'')+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>';
   if(cm&&g.metric==='fcr'){
     var miss=g.sel.map(cycleById).filter(function(x){if(!x)return false;var si=shipOf(x.id);return si!==undefined&&!(si&&si.date&&si.W>0);});
@@ -1898,12 +1899,12 @@ function renderGraph(){
     body='<div class="state"><p>'+(loading?'불러오는 중…':'표시할 기록이 없습니다. '+(g.metric==='temp'?'센서 탭에서 온도 파일을 불러오거나 입력 탭에서 온도를 넣으면 나타납니다.':g.metric==='humi'?'센서 탭에서 파일을 불러오거나 입력 탭에서 습도를 넣으면 나타납니다.':'입력 탭에서 수량을 넣으면 나타납니다.'))+'</p></div>';
   }else if(g.table){
     var rowsMap={};
-    vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);(rowsMap[k]=rowsMap[k]||{x:p.x,d:p.d,a:p.a,lab:p.lab,v:{}}).v[s.key]=p.y;});});
+    vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);(rowsMap[k]=rowsMap[k]||{x:p.x,d:p.d,a:p.a,lab:p.lab,v:{},sv:{}}).v[s.key]=p.y;rowsMap[k].sv[s.key]=p;});});
     var rows=Object.keys(rowsMap).map(function(k){return rowsMap[k];}).sort(function(a,b){return b.x-a.x;});
     body='<div class="scroll"><table class="tbl"><thead><tr><th>'+(cm?'일령':'날짜')+'</th>'+vis.map(function(s){return '<th>'+s.name+'</th>';}).join('')+'</tr></thead><tbody>'+
       rows.map(function(r){
         var first=cm?r.a+'일령'+(r.lab?' '+r.lab:''):r.d.slice(5).replace('-','.')+(r.lab?' '+r.lab:'')+'<small>'+r.a+'일령</small>';
-        return '<tr><td>'+first+'</td>'+vis.map(function(s){return '<td>'+(r.v[s.key]==null?'–':gVal(m,r.v[s.key]))+'</td>';}).join('')+'</tr>';
+        return '<tr><td>'+first+'</td>'+vis.map(function(s){return '<td>'+(r.v[s.key]==null?'–':gVal(m,r.v[s.key])+gSub(r.sv[s.key]))+'</td>';}).join('')+'</tr>';
       }).join('')+'</tbody></table></div>';
   }else{
     var W=Math.max(300,Math.min(pane.clientWidth||340,920)),H=300,L=46,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B;
@@ -1957,7 +1958,7 @@ function bindGraphHover(){
     cur.setAttribute('x1',cx.toFixed(1));cur.setAttribute('x2',cx.toFixed(1));cur.style.display='';
     dots.innerHTML=dh;
     tip.innerHTML='<b>'+head.a+'일령'+(G.cm?'':' · '+head.d.slice(5).replace('-','.'))+(head.lab?' '+head.lab:'')+'</b>'+
-      rows.map(function(x){return '<div><span><i style="background:'+x.s.sw+'"></i>'+x.s.name+'</span><span>'+gVal(G.m,x.p.y)+' '+G.m.unit+'</span></div>';}).join('');
+      rows.map(function(x){return '<div><span><i style="background:'+x.s.sw+'"></i>'+x.s.name+'</span><span>'+gVal(G.m,x.p.y)+gSub(x.p)+' '+G.m.unit+'</span></div>';}).join('');
     tip.style.display='';
     var cssX=cx/k,tw=tip.offsetWidth,left=cssX+12;
     if(left+tw>wrap.clientWidth)left=cssX-12-tw;
@@ -2310,7 +2311,7 @@ async function init(){
     S.db.collection('settle').onSnapshot(function(sn){
       if(sn.empty&&sn.metadata&&sn.metadata.fromCache)return;
       var m={};sn.docs.forEach(function(d){var x=d.data();if(x&&x.ship)m[d.id]={date:x.ship.date||'',ready:shipReady(x)};});
-      S.shipMap=m;if($('cycList'))fillList();
+      S.shipMap=m;if($('cycList'))fillList();renderHeader();
     },function(e){});
   }catch(e){}}
   if(isOwner()){try{
