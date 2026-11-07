@@ -315,7 +315,7 @@ function addDays(s,n){return new Date((dayNum(s)+n)*86400000).toISOString().slic
 function dot(s){return s.replace(/-/g,'.');}
 function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
-var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false},
+var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
 var VER='v14';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
@@ -1641,7 +1641,7 @@ async function applyImp(){
 var SER_ORDER=[1,2,3,4,5,0];
 var MET={temp:{k:'temp',label:'온도',unit:'℃'},humi:{k:'humi',label:'습도',unit:'%'},dead:{k:'dead',label:'폐사',unit:'마리'},cull:{k:'cull',label:'도태',unit:'마리'},
   loss:{k:'loss',label:'폐사+도태',unit:'마리'},
-  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율',unit:''}};
+  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리/일'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율(출하)',unit:''}};
 var MET_H=['temp','humi','dead','cull','loss','feed'],MET_C=['temp','humi','dead','cull','loss','feed','fpp','drate','fcr'];
 function lossOf(o){return (o?(Number(o.dead)||0)+(Number(o.cull)||0):0);}
 var GH=null;
@@ -1684,6 +1684,16 @@ function houseSeries(c){
 }
 /* 입식(파트)별 겹쳐보기 */
 function cycLabel(c){return c.stockDate.slice(2).replace(/-/g,'.')+' 입식';}
+function shipFrom(doc){
+  var sh=doc&&doc.ship;if(!sh)return null;
+  var ws=(Array.isArray(sh.weights)?sh.weights:[]).filter(isNum),W=ws.reduce(function(x,y){return x+y;},0);
+  return {date:/^\d{4}-\d{2}-\d{2}$/.test(sh.date||'')?sh.date:null,W:W,heads:isNum(sh.heads)?sh.heads:null};
+}
+/* 출하 정보: 현재 입식은 불러온 정산 문서, 다른 입식은 따로 불러온 값. undefined=불러오는 중, null=없음 */
+function shipOf(cid){
+  if(cid===S.cid&&S.settle)return shipFrom(S.settle);
+  var v=S.g.ship[cid];return v;
+}
 function cycSrc(cid){
   if(cid===S.cid)return {entries:Array.from(S.entries.values()),days:Array.from(S.days.values())};
   return S.g.cache[cid]||null;
@@ -1698,6 +1708,33 @@ function cycTotals(c,src,hs){
     o[e.t]+=q;tot[e.t]+=q;if(!last||e.d>last)last=e.d;
   });
   return {init:init,by:by,tot:tot,last:last};
+}
+/* 마리당 사료(일별): 사료를 입고한 날부터 다음 입고 전날까지, 입고량을 날수로 나눠 그날 마릿수로 나눈다.
+   마지막 입고는 출하일까지(출하일 포함) 쓴 것으로 본다. 출하 정보가 없으면 마지막 구간은 그리지 않는다. */
+function fppDaily(c,T,si){
+  var pts=[],fd=Object.keys(T.by).filter(function(d){return T.by[d].feed>0;}).sort();
+  var endDay=(si&&si.date)?si.date:null;
+  if(endDay)fd=fd.filter(function(d){return d<=endDay;});
+  if(!fd.length)return pts;
+  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0;
+  var headsAt=function(d){
+    while(idx<dn.length&&dn[idx]<=d){run.cull+=T.by[dn[idx]].cull;run.dead+=T.by[dn[idx]].dead;idx++;}
+    return T.init-run.cull-run.dead;
+  };
+  for(var i=0;i<fd.length;i++){
+    var a=dayNum(fd[i]),b,qty=0;
+    for(var j=0;j<fd.length;j++)if(fd[j]===fd[i])qty=T.by[fd[i]].feed;
+    if(i+1<fd.length)b=dayNum(fd[i+1])-1;
+    else if(endDay)b=dayNum(endDay);
+    else break;
+    if(b<a)b=a;
+    var days=b-a+1,per=qty/days;
+    for(var n=a;n<=b;n++){
+      var d=isoDay(n),now=headsAt(d);
+      if(now>0)pts.push({x:ageOf(c,d)+0.5,y:per/now,d:d,a:ageOf(c,d),lab:''});
+    }
+  }
+  return pts;
 }
 function cycleSeriesPts(c,src,hs,g,hours){
   var pts=[];
@@ -1718,14 +1755,20 @@ function cycleSeriesPts(c,src,hs,g,hours){
   }
   var T=cycTotals(c,src,hs),dates=Object.keys(T.by).sort();
   if(!dates.length)return pts;
+  var si=shipOf(c.id);
+  if(g.metric==='fcr'){
+    if(!si||!si.date||!(si.W>0))return pts;
+    var fk=0;Object.keys(T.by).forEach(function(d){if(d<=si.date)fk+=T.by[d].feed;});
+    if(fk>0)pts.push({x:ageOf(c,si.date)+0.5,y:fk/si.W,d:si.date,a:ageOf(c,si.date),lab:''});
+    return pts;
+  }
+  if(g.metric==='fpp')return fppDaily(c,T,si);
   var run={cull:0,dead:0,feed:0};
   for(var n=dayNum(dates[0]);n<=dayNum(dates[dates.length-1]);n++){
     var d=isoDay(n),o=T.by[d]||{cull:0,dead:0,feed:0},a=ageOf(c,d),y=null;
     run.cull+=o.cull;run.dead+=o.dead;run.feed+=o.feed;
     var now=T.init-run.cull-run.dead;
-    if(g.metric==='fpp')y=now>0?run.feed/now:null;
-    else if(g.metric==='drate')y=T.init>0?run.dead/T.init*100:null;
-    else if(g.metric==='fcr'){var w=Number(c.expectedWeight)||0;y=(now>0&&w>0)?run.feed/(now*w):null;}
+    if(g.metric==='drate')y=T.init>0?run.dead/T.init*100:null;
     else if(g.metric==='loss')y=g.cum?(run.dead+run.cull):(o.dead+o.cull);
     else y=g.cum?run[g.metric]:o[g.metric];
     if(y!=null)pts.push({x:a+0.5,y:y,d:d,a:a,lab:''});
@@ -1737,13 +1780,19 @@ function cycleSeries(){
   g.sel.forEach(function(cid){
     var c=cycleById(cid),src=cycSrc(cid);if(!c)return;
     var col='var(--s'+g.color[cid]+')';
-    out.push({key:cid,name:cycLabel(c),color:col,dash:false,sw:col,loading:!src,pts:src?cycleSeriesPts(c,src,hs,g,hours):[]});
+    out.push({key:cid,name:cycLabel(c),color:col,dash:false,sw:col,loading:!src||((g.metric==='fpp'||g.metric==='fcr')&&shipOf(cid)===undefined),pts:src?cycleSeriesPts(c,src,hs,g,hours):[]});
   });
   return out;
 }
 function ensureCmp(){
   var g=S.g;if(g.mode!=='cycle'||!S.db)return;
   g.sel.forEach(function(cid){
+    if(!(cid in g.ship)&&!g.shipPending[cid]&&!(cid===S.cid&&S.settle)){
+      g.shipPending[cid]=true;
+      S.db.doc('settle/'+cid).get().then(function(sn){g.ship[cid]=sn.exists?shipFrom(sn.data()):null;})
+        .catch(function(){g.ship[cid]=null;})
+        .then(function(){delete g.shipPending[cid];if(S.tab==='graph')renderGraph();});
+    }
     if(cid===S.cid||g.cache[cid]||g.pending[cid])return;
     g.pending[cid]=true;
     Promise.all([S.db.collection('entries').where('c','==',cid).get(),S.db.collection('days').where('c','==',cid).get()])
@@ -1772,8 +1821,9 @@ function cycSummaryHTML(){
   var hs=scopeHs(),g=S.g;
   var cols=g.sel.map(function(cid){
     var c=cycleById(cid),src=cycSrc(cid);if(!c||!src)return null;
-    var T=cycTotals(c,src,hs),now=T.init-T.tot.cull-T.tot.dead,w=Number(c.expectedWeight)||0;
-    return {c:c,T:T,now:now,w:w,cid:cid};
+    var T=cycTotals(c,src,hs),now=T.init-T.tot.cull-T.tot.dead,si=shipOf(cid),w=(si&&si.W)||0;
+    var fk=null;if(si&&si.date){fk=0;Object.keys(T.by).forEach(function(d){if(d<=si.date)fk+=T.by[d].feed;});}
+    return {c:c,T:T,now:now,w:w,si:si,fk:fk,cid:cid};
   }).filter(Boolean);
   if(!cols.length)return '';
   var rows=[
@@ -1785,14 +1835,16 @@ function cycSummaryHTML(){
     ['폐사율',function(x){return x.T.init>0?(x.T.tot.dead/x.T.init*100).toFixed(2)+'%':'–';}],
     ['현재 마릿수',function(x){return fmt(x.now);}],
     ['사료 입고 누계 (kg)',function(x){return fmtN(x.T.tot.feed);}],
-    ['마리당 사료 (kg)',function(x){return x.now>0?(x.T.tot.feed/x.now).toFixed(2):'–';}],
-    ['예상 중량 (kg)',function(x){return x.w>0?String(x.w):'–';}],
-    ['사료요구율',function(x){return (x.w>0&&x.now>0)?(x.T.tot.feed/(x.now*x.w)).toFixed(2):'–';}]
+    ['마리당 사료 누계 (kg)',function(x){return x.now>0?(x.T.tot.feed/x.now).toFixed(2):'–';}],
+    ['마리당 사료 일평균 (kg/일)',function(x){var pp=fppDaily(x.c,x.T,x.si);return pp.length?(pp.reduce(function(a,b){return a+b.y;},0)/pp.length).toFixed(3):'–';}],
+    ['출하일령',function(x){return (x.si&&x.si.date)?ageOf(x.c,x.si.date)+'일령':'–';}],
+    ['출하 중량 (kg)',function(x){return x.w>0?fmtN(x.w):'–';}],
+    ['사료요구율 (출하 기준)',function(x){return (x.w>0&&x.fk>0)?(x.fk/x.w).toFixed(2):'–';}]
   ];
   return '<h2 style="margin:6px 0 0;font-family:var(--font-display);font-weight:400;font-size:20px">입식별 요약 · '+(g.scope==='all'?'전체 동':g.scope+'동')+'</h2>'+
     '<div class="scroll"><table class="tbl sum"><thead><tr><th>항목</th>'+cols.map(function(x){return '<th><i class="sw" style="background:var(--s'+g.color[x.cid]+');display:block;margin:0 0 4px auto"></i>'+cycLabel(x.c)+'</th>';}).join('')+'</tr></thead><tbody>'+
     rows.map(function(r){return '<tr><td>'+r[0]+'</td>'+cols.map(function(x){return '<td>'+r[1](x)+'</td>';}).join('')+'</tr>';}).join('')+'</tbody></table></div>'+
-    '<p class="hint">사료요구율 = 사료 입고 누계 ÷ (현재 마릿수 × 예상 중량). 예상 중량은 평균 탭에서 입식별로 입력한 값입니다.</p>';
+    '<p class="hint">사료요구율 = 출하일까지 입고한 사료 ÷ 출하 중량(정산 탭에 입력한 값). 출하 정보가 없는 입식은 표시하지 않습니다.</p>';
 }
 
 function niceTicks(lo,hi,n){
@@ -1803,7 +1855,7 @@ function niceTicks(lo,hi,n){
   for(var v=Math.floor(lo/step)*step;v<=Math.ceil(hi/step)*step+step*1e-6;v+=step)out.push(Number(v.toFixed(dec)));
   return {ticks:out,dec:dec};
 }
-function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):(m.k==='fpp'||m.k==='drate'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
+function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):m.k==='fpp'?v.toFixed(3):(m.k==='drate'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
 function renderGraph(){
   var pane=$('pane-graph'),c=cyc(),g=S.g;
   if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);GH=null;return;}
@@ -1832,11 +1884,11 @@ function renderGraph(){
     }).join('')+'</div>';
   }
   var loading=cm&&series.some(function(s){return s.loading;});
-  var cap='<p class="hint">'+(m.unit?'단위 '+m.unit:'사료 입고 누계 ÷ (현재 마릿수 × 예상 중량)')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 하루 3점은 아침·점심·저녁 평균':'')+
+  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리/일 · 사료 입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수 (마지막 입고는 출하일까지, 출하 정보가 없으면 표시 안 함)':m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 하루 3점은 아침·점심·저녁 평균':'')+
     (g.metric==='temp'?' · 센서 탭에서 불러온 온도와 직접 입력한 온도':g.metric==='humi'?' · 센서 탭에서 불러온 습도와 직접 입력한 습도':'')+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>';
   if(cm&&g.metric==='fcr'){
-    var miss=g.sel.map(cycleById).filter(function(x){return x&&!(Number(x.expectedWeight)>0);});
-    if(miss.length)cap+='<p class="err">예상 중량이 없어 요구율을 그릴 수 없는 입식: '+miss.map(cycLabel).join(', ')+' (평균 탭에서 입력)</p>';
+    var miss=g.sel.map(cycleById).filter(function(x){if(!x)return false;var si=shipOf(x.id);return si!==undefined&&!(si&&si.date&&si.W>0);});
+    if(miss.length)cap+='<p class="err">출하 정보가 없어 요구율을 그릴 수 없는 입식: '+miss.map(cycLabel).join(', ')+' (정산 탭에서 출하일·출하 중량 입력)</p>';
   }
   var all=[];vis.forEach(function(s){s.pts.forEach(function(p){all.push(p);});});
   var body='';GH=null;
@@ -2039,7 +2091,7 @@ async function doExport(){
 /* ---------- 이벤트 ---------- */
 var timers={};
 function bind(){
-  document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){S.tab=b.dataset.tab;if(S.tab==='graph')S.g.cache={};render();window.scrollTo(0,0);});});
+  document.querySelectorAll('.tab').forEach(function(b){b.addEventListener('click',function(){S.tab=b.dataset.tab;if(S.tab==='graph')S.g.cache={};S.g.ship={};render();window.scrollTo(0,0);});});
   var rzT=null;
   window.addEventListener('resize',function(){clearTimeout(rzT);rzT=setTimeout(function(){if(S.tab==='graph')renderGraph();},200);});
   $('cycBtn').addEventListener('click',function(){goHome(false);});
@@ -2094,7 +2146,7 @@ function bind(){
     var gv=e.target.closest('[data-gv]');
     if(gv){S.g.table=gv.dataset.gv==='1';renderGraph();return;}
     var gmo=e.target.closest('[data-gmode]');
-    if(gmo){S.g.mode=gmo.dataset.gmode;if(S.g.mode==='cycle')S.g.cache={};renderGraph();return;}
+    if(gmo){S.g.mode=gmo.dataset.gmode;if(S.g.mode==='cycle')S.g.cache={};S.g.ship={};renderGraph();return;}
     var gsc=e.target.closest('[data-gsc]');
     if(gsc){S.g.scope=gsc.dataset.gsc;renderGraph();return;}
     var gcy=e.target.closest('[data-gcy]');
@@ -2105,7 +2157,7 @@ function bind(){
       else cmpAdd(gid);
       S.g.selInit=true;renderGraph();return;
     }
-    if(e.target.closest('[data-grf]')){S.g.cache={};renderGraph();toast('다시 불러오는 중…');return;}
+    if(e.target.closest('[data-grf]')){S.g.cache={};S.g.ship={};renderGraph();toast('다시 불러오는 중…');return;}
     var gs=e.target.closest('[data-gs]');
     if(gs){var hk=gs.dataset.gs;if(S.g.off[hk])delete S.g.off[hk];else S.g.off[hk]=true;renderGraph();return;}
     var f=e.target.closest('[data-filter]');
