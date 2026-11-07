@@ -239,6 +239,7 @@ select.sfld{text-align:left;padding-right:4px}
       <button type="button" class="btn" id="newBtn">새 입식</button>
     </div>
     <p class="notice" id="notice" hidden></p>
+    <p class="notice bad" id="quotaNote" hidden role="alert"></p>
     <p class="notice" id="syncNote" hidden>기록을 불러오는 중입니다. 잠시 후 숫자가 갱신됩니다.</p>
   </header>
   <main>
@@ -808,6 +809,33 @@ async function saveTermsFor(cid,terms){
   d.c=cid;d.terms=terms;
   await S.db.doc('settle/'+cid).set(d);
 }
+/* ---- 오늘 읽기 사용량(추정): 모든 기기가 올린 합계 ---- */
+var QUOTA=50000;
+function refreshUsage(){
+  var U=window.__usage;if(!S.db||!U)return;
+  S.db.doc('usage/'+U.day()).get().then(function(sn){
+    var d=sn.exists?sn.data():{};
+    S.usage={day:U.day(),total:Number(d.total)||0,by:d.by||{}};renderUsage();
+  }).catch(function(){});
+}
+function renderUsage(){
+  var U=window.__usage,u=S.usage;if(!U||!u)return;
+  var pend=U.pend(),tot=(u.day===U.day()?u.total:0)+pend,pct=tot/QUOTA*100,hot=pct>=90;
+  var qn=$('quotaNote');
+  if(qn){
+    if(hot){qn.textContent=(pct>=100?'오늘 읽기 한도(5만 건)를 넘긴 것으로 추정됩니다':'오늘 읽기 한도의 90%를 넘었습니다')+' (약 '+fmt(Math.round(tot))+' / '+fmt(QUOTA)+'). 한도를 넘으면 한국 시간 오후 5시경 초기화될 때까지 기록을 불러오지 못할 수 있으니 새로고침·입식 비교를 줄여 주세요.';qn.hidden=false;}
+    else qn.hidden=true;
+  }
+  var box=$('usageBox');if(!box)return;
+  if(!isOwner()){box.hidden=true;return;}
+  var by=u.by||{},ow=Number(by.owner)||0,st=Number(by.staff)||0;
+  box.hidden=false;
+  box.innerHTML='<h2>오늘 읽기 사용량 <span class="hint">(추정)</span></h2>'+
+    '<div style="height:10px;border-radius:6px;background:var(--line);overflow:hidden"><div style="height:100%;width:'+Math.min(100,pct).toFixed(1)+'%;background:'+(hot?'var(--bad)':'var(--accent)')+'"></div></div>'+
+    '<div><b>약 '+fmt(Math.round(tot))+'</b> / '+fmt(QUOTA)+' 건 ('+pct.toFixed(1)+'%)</div>'+
+    '<p class="hint" style="margin:0">사장님 '+fmt(ow)+' · 직원 '+fmt(st)+' · 아직 올리지 않은 이 기기분 '+fmt(pend)+'</p>'+
+    '<p class="hint" style="margin:0">모든 기기가 읽은 기록 수를 합친 추정값이며, 한국 시간 오후 5시경 0부터 다시 시작합니다. 90%를 넘으면 맨 위에 경고가 뜹니다. 정확한 값은 Firebase 콘솔의 사용량 탭에서 확인하세요.</p>';
+}
 function renderHome(){
   var pane=$('pane-home');
   if(!$('homeForm')){
@@ -828,14 +856,15 @@ function renderHome(){
       '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
       '<p class="err" id="nErr" hidden></p>'+
       '<div class="cyc-btns"><button type="button" class="btn primary" id="nSave" data-act="save">입식 등록</button>'+
-      '<button type="button" class="btn" id="nCancel" data-act="cancel-edit" hidden>취소</button></div></section>';
+      '<button type="button" class="btn" id="nCancel" data-act="cancel-edit" hidden>취소</button></div></section>'+
+      '<section class="card" id="usageBox" hidden></section>';
     $('nDate').value=todayStr();renderNMonths();S.prefilled=false;
   }
   if(isOwner()&&S.db&&S.ready&&S.cycles.length&&!S.bkClean){S.bkClean=true;cleanLegacyBackups();}
   var ntb=$('nTermsBox');if(ntb)ntb.hidden=!isOwner();
   fillNSub();
   if(S.db&&S.ready&&!S.prefilled&&!S.editId){S.prefilled=true;prefillTerms();}
-  fillList();refreshAutoBk(false);
+  fillList();refreshAutoBk(false);renderUsage();
 }
 function fillList(){
   var box=$('cycList');if(!box)return;
@@ -2342,6 +2371,7 @@ async function init(){
     S.db.collection('cycles').onSnapshot(function(sn){S.dbg.실시간=sn.docs.length+'건'+(sn.metadata&&sn.metadata.fromCache?'(캐시)':'');onCycles(sn);},function(e){S.dbg.실시간='오류 '+((e&&(e.code||e.message))||'?');handleErr(e);});
   }catch(e){handleErr(e);}
   loadCycles(0);
+  refreshUsage();setInterval(function(){if(!document.hidden)refreshUsage();},300000);
   setTimeout(function(){
     if(!S.ready){S.status='저장소 응답이 늦습니다. 자동으로 다시 시도하는 중…';render();}
   },8000);
@@ -2382,6 +2412,55 @@ function dl(req){
     }catch(e){rej({code:'unavailable',message:String(e)});}
   });
 }
+
+/* 읽기 사용량 세기: 이 기기가 서버에서 읽은 기록 줄 수를 세어 몇 분마다 usage/{날짜} 문서에 합산한다 (추정치) */
+var LIM=50000,pend=0,pendDay=null;
+function dayKey(){try{return new Date().toLocaleDateString('en-CA',{timeZone:'America/Los_Angeles'});}catch(e){return new Date().toISOString().slice(0,10);}}
+pendDay=dayKey();
+try{var sv=JSON.parse(localStorage.getItem('wl-usage')||'null');if(sv&&sv.n>0&&sv.day){pend=sv.n;pendDay=sv.day;}}catch(e){}
+function persist(){try{localStorage.setItem('wl-usage',JSON.stringify({day:pendDay,n:pend}));}catch(e){}}
+function isOwnerNow(){return !CFG.ownerEmail||!!(fuser&&fuser.email&&normMail(fuser.email)===normMail(CFG.ownerEmail));}
+function flush(){
+  if(!pend||!fdb||!fuser)return;
+  var n=pend,day=pendDay;pend=0;persist();
+  var role=isOwnerNow()?'owner':'staff',inc=function(x){return (firebase.firestore.FieldValue&&firebase.firestore.FieldValue.increment)?firebase.firestore.FieldValue.increment(x):x;};
+  var by={};by[role]=inc(n);
+  try{fdb.doc('usage/'+day).set({total:inc(n),by:by,upd:Date.now()},{merge:true}).catch(function(){pend+=n;persist();});}
+  catch(e){pend+=n;persist();}
+}
+function count(n){
+  if(!(n>0))return;
+  var k=dayKey();if(k!==pendDay){flush();pendDay=k;}
+  pend+=n;persist();
+}
+function cntSnap(sn,listen){
+  try{
+    if(!sn||(sn.metadata&&(sn.metadata.fromCache||sn.metadata.hasPendingWrites)))return;
+    if(sn.docs!==undefined)count(listen&&sn.docChanges?sn.docChanges().length:sn.size);else count(1);
+  }catch(e){}
+}
+function wrap(o){
+  if(!o||typeof o!=='object')return o;
+  return new Proxy(o,{get:function(t,k){
+    var v=t[k];
+    if(typeof v!=='function')return v;
+    if(k==='get')return function(){var r=v.apply(t,arguments);return (r&&r.then)?r.then(function(sn){cntSnap(sn,false);return sn;}):r;};
+    if(k==='onSnapshot')return function(){
+      var a=Array.prototype.slice.call(arguments);
+      for(var i=0;i<a.length;i++){if(typeof a[i]==='function'){(function(f,j){a[j]=function(sn){cntSnap(sn,true);return f.apply(this,arguments);};})(a[i],i);break;}}
+      return v.apply(t,a);
+    };
+    return function(){
+      var r=v.apply(t,arguments);
+      return (r&&typeof r==='object'&&!r.then&&(typeof r.onSnapshot==='function'||typeof r.get==='function'))?wrap(r):r;
+    };
+  }});
+}
+window.__usage={limit:LIM,day:dayKey,pend:function(){return pend;},flush:flush};
+setInterval(flush,120000);
+document.addEventListener('visibilitychange',function(){if(document.hidden)flush();});
+window.addEventListener('pagehide',flush);
+
 window.claude={use:function(name){
   if(name==='db')return Promise.resolve(fdb);
   if(name==='downloads')return Promise.resolve({save:dl});
@@ -2400,7 +2479,7 @@ firebase.initializeApp(CFG);
 var auth=firebase.auth();
 auth.onAuthStateChanged(function(u){
   if(u){
-    fuser=u;fdb=firebase.firestore();
+    fuser=u;fdb=wrap(firebase.firestore());
     $('login').hidden=true;$('fbOut').hidden=false;$('whoami').textContent=u.email||'';
     if(!started){started=true;if(window.__appInit)window.__appInit();}
   }else{
