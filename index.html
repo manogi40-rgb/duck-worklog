@@ -199,6 +199,8 @@ button,input,textarea{font:inherit;color:inherit}
 .cyc-main{display:flex;flex-direction:column;gap:2px;min-width:0}
 .cyc-main b{font-family:var(--font-display);font-weight:400;font-size:22px;line-height:1.2;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 .cyc-main span{color:var(--muted);font-size:13px;font-variant-numeric:tabular-nums}
+.cyc-main b .cyc-age{font-family:var(--font-body);font-size:14px;color:var(--accent-ink)}
+.cyc-main b .badge{color:var(--accent-ink);font-size:12px}
 .badge{font-family:var(--font-body);font-size:12px;font-weight:700;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:1px 9px}
 .cyc-btns{display:flex;gap:8px;flex-wrap:wrap}
 .cyc-btns .btn{min-height:42px;padding:0 14px;flex:1 1 auto}
@@ -844,11 +846,12 @@ function fillList(){
   box.innerHTML=(S.stale?'<p class="hint" style="margin:0">저장된 목록을 먼저 보여주고 있습니다. 최신 내용을 확인하는 중입니다…</p>':'')+S.cycles.map(function(c){
     var a=ageOf(c,today),sum=HOUSES.reduce(function(x,h){return x+headsOf(c,h);},0);
     var sm=(S.shipMap||{})[c.id],sd=(sm&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||'')&&sm.date>=c.stockDate)?sm.date:null;
-    var agetxt=sd?ageOf(c,sd)+'일령 출하 ('+dot(sd)+')':(sm&&sm.ready?'출하 완료':(a>=1?a+'일령':'입식 전'));
+    var pill=sd?ageOf(c,sd)+'일령 출하':(a>=1?a+'일령':'입식 전');
+    var agetxt=sd?'출하일 '+dot(sd):(sm&&sm.ready?'출하 완료':'');
     var id=esc(c.id);
     return '<div class="cyc-card" aria-current="'+(c.id===S.cid)+'">'+
-      '<div class="cyc-main"><b>'+dot(c.stockDate)+' 입식'+(c.id===S.cid?'<span class="badge">선택됨</span>':'')+'</b>'+
-      '<span>총 '+fmt(c.total)+'수 · 서비스 포함 '+fmt(sum)+'수 · '+agetxt+'</span>'+(c.note?'<span style="white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font-size:14px;margin-top:2px">'+esc(c.note)+'</span>':'')+'</div>'+
+      '<div class="cyc-main"><b>'+dot(c.stockDate)+' 입식<span class="cyc-age">'+pill+'</span>'+'</b>'+
+      '<span>총 '+fmt(c.total)+'수 · 서비스 포함 '+fmt(sum)+'수'+(agetxt?' · '+agetxt:'')+'</span>'+(c.note?'<span style="white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font-size:14px;margin-top:2px">'+esc(c.note)+'</span>':'')+'</div>'+
       '<div class="cyc-btns"><button type="button" class="btn primary" data-act="open" data-cid="'+id+'">열기</button>'+
       '<button type="button" class="btn" data-act="edit" data-cid="'+id+'"'+(ro?' disabled':'')+'>수정</button>'+
       '<button type="button" class="btn" data-act="backup" data-cid="'+id+'">백업</button>'+
