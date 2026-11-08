@@ -88,6 +88,10 @@ button,input,textarea{font:inherit;color:inherit}
 .tdhist .tdi .tdt{text-decoration:line-through;color:var(--muted)}
 .tdhist .tdt small{text-decoration:none}
 .tdundo{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;font-size:12px;padding:4px 8px;white-space:nowrap}
+.tdnote{display:block;width:100%;min-height:44px;text-align:left;cursor:pointer;font-weight:700;border-color:var(--accent);background:var(--accent);color:var(--accent-ink)}
+.tdnote[hidden]{display:none}
+.tdbadge{display:inline-block;min-width:18px;height:18px;line-height:18px;margin-left:4px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:11px;font-weight:700;vertical-align:top;text-align:center}
+.tdbadge[hidden]{display:none}
 .sumline{display:flex;gap:6px 18px;flex-wrap:wrap;color:var(--muted)}
 .sumline b{color:var(--ink);font-variant-numeric:tabular-nums}
 
@@ -261,6 +265,7 @@ select.sfld{text-align:left;padding-right:4px}
     <p class="notice" id="notice" hidden></p>
     <p class="notice bad" id="quotaNote" hidden role="alert"></p>
     <p class="notice" id="syncNote" hidden>기록을 불러오는 중입니다. 잠시 후 숫자가 갱신됩니다.</p>
+    <button type="button" class="notice tdnote" id="tdNote" hidden></button>
   </header>
   <main>
     <section id="pane-home" class="pane" role="tabpanel" aria-label="입식"></section>
@@ -275,7 +280,7 @@ select.sfld{text-align:left;padding-right:4px}
 
 <nav class="tabs" role="tablist" aria-label="화면 선택">
   <button type="button" class="tab" role="tab" data-tab="home" aria-selected="true">입식</button>
-  <button type="button" class="tab" role="tab" data-tab="input" aria-selected="false">입력</button>
+  <button type="button" class="tab" role="tab" data-tab="input" aria-selected="false">입력<span class="tdbadge" id="tdBadge" hidden></span></button>
   <button type="button" class="tab" role="tab" data-tab="log" aria-selected="false">기록</button>
   <button type="button" class="tab" role="tab" data-tab="avg" aria-selected="false">평균</button>
   <button type="button" class="tab" role="tab" data-tab="graph" aria-selected="false">그래프</button>
@@ -340,7 +345,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v14';
+var VER='v15';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -537,6 +542,9 @@ function render(){
   if(S.tab==='input')renderInput();else if(S.tab==='log')renderLog();else renderAvg();
   updateRO();
 }
+/* render 가 끝날 때마다(화면 전환 포함) 새 메모 알림 상태를 다시 계산 */
+var renderBase=render;
+render=function(){renderBase.apply(this,arguments);try{updateTdAlert();}catch(e){}};
 function updateRO(){
   var ro=!S.canWrite;
   document.querySelectorAll('#pane-input input,#pane-input textarea,#pane-input .sign,#pane-avg #wIn').forEach(function(e){
@@ -575,11 +583,39 @@ function renderTodos(){
 function mergeTodos(){
   var m=new Map();
   [S.todosU,S.todosR].forEach(function(mp){if(mp)mp.forEach(function(v,k){m.set(k,v);});});
-  S.todos=Array.from(m.values());renderTodos();
+  S.todos=Array.from(m.values());renderTodos();updateTdAlert();
+}
+/* ---- 새 메모 알림(앱 안): 상대가 남긴 안 읽은 메모를 위 배너와 입력 탭 배지로 알림 ----
+   읽음 기준은 기기별로 저장(localStorage)하므로 Firebase 읽기 건수는 늘지 않는다 */
+function tdSeenKey(){return 'tdSeen_'+(isOwner()?'o':'s');}
+function tdIncoming(){return (S.todos||[]).filter(function(t){return !t.done&&!todoMine(t.side);});}
+function tdMaxAt(list){var m=0;list.forEach(function(t){if((t.at||0)>m)m=t.at;});return m;}
+function tdMarkSeen(){var m=tdMaxAt(tdIncoming()),k=tdSeenKey();if(m>(Number(lsGet(k))||0))lsSet(k,String(m));}
+function updateTdAlert(){
+  if(!S.todoOn||!S.todosU)return;
+  var inc=tdIncoming(),max=tdMaxAt(inc);
+  var viewing=S.tab==='input'&&!document.hidden&&!!document.querySelector('#pane-input [data-tdlist]');
+  if(viewing){
+    if(S.tdInit&&max>(S.tdLastMax||0))toast('새 메모가 도착했습니다');
+    tdMarkSeen();
+  }
+  S.tdLastMax=max;S.tdInit=true;
+  var seen=Number(lsGet(tdSeenKey()))||0;
+  var fresh=viewing?[]:inc.filter(function(t){return (t.at||0)>seen;});
+  fresh.sort(function(a,b){return (b.at||0)-(a.at||0);});
+  var n=fresh.length,bn=$('tdNote'),bd=$('tdBadge');
+  if(bn){
+    bn.hidden=!n;
+    if(n){var tx=String(fresh[0].text||'');if(tx.length>24)tx=tx.slice(0,24)+'…';bn.textContent='새 메모 '+n+'건 · '+tx+' (눌러서 확인)';}
+  }
+  if(bd){bd.hidden=!n;bd.textContent=n>9?'9+':String(n);}
 }
 function tdMap(sn){var m=new Map();sn.docs.forEach(function(d){var o=Object.assign({},d.data());o.id=d.id;m.set(d.id,o);});return m;}
 function startTodos(){
   if(S.todoOn||!S.db)return;S.todoOn=true;S.todos=[];
+  var tdn=$('tdNote');
+  if(tdn)tdn.addEventListener('click',function(){S.tab='input';render();window.scrollTo(0,0);});
+  document.addEventListener('visibilitychange',function(){if(!document.hidden)updateTdAlert();});
   /* 미완료 메모 + 완료 후 3일 이내 메모만 불러온다(그보다 오래된 완료 메모는 '완료한 메모 보기'에서) */
   S.db.collection('todos').where('done','==',false).onSnapshot(function(sn){
     if(sn.empty&&sn.metadata&&sn.metadata.fromCache)return;
