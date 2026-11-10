@@ -580,7 +580,7 @@ function startLive(){
 }
 
 /* ---- 할일 메모: 사장 → 직원 / 직원 → 사장 ---- */
-var TD_KEEP=3*86400000;
+var TD_KEEP=12*3600000; /* 완료 후 목록에 남는 시간: 12시간 */
 var TODO_SIDES=[{k:'o2s',label:'사장 → 직원'},{k:'s2o',label:'직원 → 사장'}];
 function todoMine(side){return isOwner()?side==='o2s':side==='s2o';}
 function todoShell(){
@@ -614,7 +614,8 @@ function mergeTodos(){
 function tdMap(sn){var m=new Map();sn.docs.forEach(function(d){var o=Object.assign({},d.data());o.id=d.id;m.set(d.id,o);});return m;}
 function startTodos(){
   if(S.todoOn||!S.db)return;S.todoOn=true;S.todos=[];
-  /* 미완료 메모 + 완료 후 3일 이내 메모만 불러온다(그보다 오래된 완료 메모는 '완료한 메모 보기'에서) */
+  setInterval(renderTodos,5*60000); /* 켜 둔 채로도 12시간이 지나면 목록에서 빠지게 */
+  /* 미완료 메모 + 완료 후 12시간 이내 메모만 불러온다(그보다 오래된 완료 메모는 '완료한 메모 보기'에서) */
   S.db.collection('todos').where('done','==',false).onSnapshot(function(sn){
     if(sn.empty&&sn.metadata&&sn.metadata.fromCache)return;
     S.todosU=tdMap(sn);mergeTodos();
