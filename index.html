@@ -2619,10 +2619,11 @@ function count(n){
   var k=dayKey();if(k!==pendDay){flush();pendDay=k;}
   pend+=n;persist();
 }
-function cntSnap(sn,listen){
+function cntSnap(sn,listen,fr){
   try{
     if(!sn||(sn.metadata&&(sn.metadata.fromCache||sn.metadata.hasPendingWrites)))return;
-    if(sn.docs!==undefined)count(listen&&sn.docChanges?sn.docChanges().length:sn.size);else count(1);
+    /* 폰 저장을 켜면 처음 받은 서버 결과가 '바뀐 것만' 담길 수 있어, 리스너마다 처음 한 번은 전체 줄 수로 세어 넉넉하게 추정한다 */
+    if(sn.docs!==undefined){var first=!!(fr&&fr.v);if(fr)fr.v=false;count(listen&&sn.docChanges&&!first?sn.docChanges().length:sn.size);}else count(1);
   }catch(e){}
 }
 function wrap(o){
@@ -2633,7 +2634,7 @@ function wrap(o){
     if(k==='get')return function(){var r=v.apply(t,arguments);return (r&&r.then)?r.then(function(sn){cntSnap(sn,false);return sn;}):r;};
     if(k==='onSnapshot')return function(){
       var a=Array.prototype.slice.call(arguments);
-      for(var i=0;i<a.length;i++){if(typeof a[i]==='function'){(function(f,j){a[j]=function(sn){cntSnap(sn,true);return f.apply(this,arguments);};})(a[i],i);break;}}
+      var fr={v:true};for(var i=0;i<a.length;i++){if(typeof a[i]==='function'){(function(f,j){a[j]=function(sn){cntSnap(sn,true,fr);return f.apply(this,arguments);};})(a[i],i);break;}}
       return v.apply(t,a);
     };
     return function(){
@@ -2662,6 +2663,8 @@ if(!CFG.projectId||!CFG.apiKey||/^여기/.test(CFG.apiKey)){
 }
 if(typeof firebase==='undefined'){showLogin('Firebase를 불러오지 못했습니다. 인터넷 연결을 확인하고 다시 열어 주세요.');$('lgBtn').disabled=true;return;}
 firebase.initializeApp(CFG);
+/* 폰(브라우저)에 기록을 저장해 두는 설정: 잠깐 끊겼다 다시 이어질 때 바뀐 기록만 받고, 인터넷이 없어도 저장된 기록은 보인다. 지원하지 않는 브라우저는 그냥 지금처럼 동작한다 */
+try{var fs0=firebase.firestore();var pp=fs0.enablePersistence({synchronizeTabs:true});if(pp&&pp.catch)pp.catch(function(){});}catch(e){}
 var auth=firebase.auth();
 auth.onAuthStateChanged(function(u){
   if(u){
