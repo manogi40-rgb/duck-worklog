@@ -71,7 +71,7 @@ button,input,textarea{font:inherit;color:inherit}
 .datebar{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .datebar input[type=date]{flex:1 1 150px;min-width:0;height:46px;border:1px solid var(--line);border-radius:10px;background:var(--surface);padding:0 12px;font-size:17px}
 .datebar .btn{padding:0 14px}
-.todobox{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.todobox{display:grid;grid-template-columns:1fr;gap:8px}
 .tdcol{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;display:flex;flex-direction:column;gap:6px;min-width:0}
 .tdcol h3{margin:0;font-size:14px;color:var(--muted);font-weight:700}
 .tdlist{display:flex;flex-direction:column;gap:2px;max-height:260px;overflow:auto}
@@ -635,27 +635,25 @@ var TD_KEEP=12*3600000; /* 완료 후 목록에 남는 시간: 12시간 */
 var TODO_SIDES=[{k:'o2s',label:'사장 → 직원',em:'👔'},{k:'s2o',label:'직원 → 사장',em:'👷'}];
 function todoMine(side){return isOwner()?side==='o2s':side==='s2o';}
 function todoShell(){
-  return '<div class="todowrap"><div class="todobox">'+TODO_SIDES.map(function(sd){
-    return '<section class="tdcol" data-side="'+sd.k+'"><h3>'+sd.label+'</h3><div class="tdlist" data-tdlist="'+sd.k+'"></div>'+
-      (todoMine(sd.k)?'<div class="tdadd"><input class="tdin" id="tdIn_'+sd.k+'" type="text" maxlength="200" autocomplete="off" placeholder="할 일 메모" aria-label="'+sd.label+' 메모"><button type="button" class="btn" data-act="td-add" data-side="'+sd.k+'">'+EM('➕')+'추가</button></div>':'')+'</section>';
-  }).join('')+'</div><div class="tdbar"><button type="button" class="btn" data-act="td-hist" id="tdHistBtn">'+EM('✅')+'완료한 메모 보기</button></div><div class="tdhist" id="tdHist" hidden></div></div>';
+  return '<div class="todowrap"><div class="todobox"><section class="tdcol" data-side="all"><div class="tdlist" data-tdlist="all"></div>'+
+    '<div class="tdadd"><input class="tdin" id="tdIn_all" type="text" maxlength="200" autocomplete="off" placeholder="할 일 메모" aria-label="할 일 메모"><button type="button" class="btn" data-act="td-add" data-side="all">'+EM('➕')+'추가</button></div></section></div>'+
+    '<div class="tdbar"><button type="button" class="btn" data-act="td-hist" id="tdHistBtn">'+EM('✅')+'완료한 메모 보기</button></div><div class="tdhist" id="tdHist" hidden></div></div>';
 }
 function tdDate(ms){var d=new Date(ms);return (d.getMonth()+1)+'.'+d.getDate();}
 function renderTodos(){
   var list=S.todos||[],now=Date.now();
-  TODO_SIDES.forEach(function(sd){
-    var box=document.querySelector('[data-tdlist="'+sd.k+'"]');if(!box)return;
-    var mine=todoMine(sd.k),items=list.filter(function(t){return t.side===sd.k&&(!t.done||(t.doneAt&&now-t.doneAt<TD_KEEP));});
-    items.sort(function(a,b){
-      if(!!a.done!==!!b.done)return a.done?1:-1;
-      return a.done?(b.doneAt||0)-(a.doneAt||0):(b.at||0)-(a.at||0);
-    });
-    box.innerHTML=items.length?items.map(function(t){
-      return '<div class="tdi'+(t.done?' done':'')+'"><input type="checkbox" data-td="'+esc(t.id)+'"'+(t.done?' checked':'')+' aria-label="완료 체크">'+
-        '<span class="tdt">'+esc(t.text)+'<small>'+(t.at?tdDate(t.at):'')+(t.done&&t.doneAt?' · 완료 '+tdDate(t.doneAt):'')+'</small></span>'+
-        ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
-    }).join(''):'<div class="tdempty">메모 없음</div>';
+  var box=document.querySelector('[data-tdlist="all"]');if(!box)return;
+  var items=list.filter(function(t){return !t.done||(t.doneAt&&now-t.doneAt<TD_KEEP);});
+  items.sort(function(a,b){
+    if(!!a.done!==!!b.done)return a.done?1:-1;
+    return a.done?(b.doneAt||0)-(a.doneAt||0):(b.at||0)-(a.at||0);
   });
+  box.innerHTML=items.length?items.map(function(t){
+    var mine=todoMine(t.side),au=t.side==='o2s'?'사장':'직원';
+    return '<div class="tdi'+(t.done?' done':'')+'"><input type="checkbox" data-td="'+esc(t.id)+'"'+(t.done?' checked':'')+' aria-label="완료 체크">'+
+      '<span class="tdt">'+esc(t.text)+'<small>'+au+(t.at?' · '+tdDate(t.at):'')+(t.done&&t.doneAt?' · 완료 '+tdDate(t.doneAt):'')+'</small></span>'+
+      ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
+  }).join(''):'<div class="tdempty">메모 없음</div>';
 }
 function mergeTodos(){
   var m=new Map();
@@ -677,7 +675,8 @@ function startTodos(){
   },function(e){});
 }
 function addTodo(side){
-  var inp=$('tdIn_'+side);if(!inp||!S.db)return;
+  side=isOwner()?'o2s':'s2o';
+  var inp=$('tdIn_all');if(!inp||!S.db)return;
   var tx=inp.value.trim();if(!tx)return;
   if(!todoMine(side))return;
   S.db.collection('todos').add({side:side,text:tx.slice(0,200),done:false,at:Date.now(),by:isOwner()?'owner':'staff'})
@@ -720,7 +719,7 @@ function renderTdHist(){
   if(!S.todosDone){box.innerHTML='<div class="tdempty">불러오는 중…</div>';return;}
   var list=S.todosDone.slice().sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
   box.innerHTML=list.length?list.map(function(t){
-    var sl=t.side==='o2s'?'사장→직원':'직원→사장',mine=todoMine(t.side);
+    var sl=t.side==='o2s'?'사장':'직원',mine=todoMine(t.side);
     return '<div class="tdi done"><span class="tdt">'+esc(t.text)+'<small>'+sl+' · 작성 '+(t.at?tdDate(t.at):'')+' · 완료 '+(t.doneAt?tdDate(t.doneAt):'')+'</small></span>'+
       '<button type="button" class="tdundo" data-act="td-undo" data-id="'+esc(t.id)+'">'+EM('↩️')+'되돌리기</button>'+
       ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
@@ -805,8 +804,7 @@ function feedCardHTML(){
     '<div class="hint" id="fsum"></div>'+
     '<div class="hint">배분 결과는 아래 각 동 사료 칸에 표시됩니다. 고쳐서 맞춘 뒤 확인을 누르면 기록됩니다.</div>'+
     '<button type="button" class="btn p" data-act="fd-save" style="width:100%;margin-top:6px">'+EM('✅')+'확인 (동별 사료 기록)</button></div>'+
-    '<label class="fmemo">'+EM('📝')+'메모<textarea id="fMemo" rows="2" maxlength="300" placeholder="사료 관련 메모"></textarea></label>'+
-    '<div class="hint" id="fMemoBy" style="font-size:11px"></div></section>';
+    '</section>';
 }
 function feedAlloc(){
   var qty=Number(($('fqIn').value||'').replace(/,/g,''));if(!isFinite(qty)||qty<0)qty=0;
@@ -876,8 +874,6 @@ function renderInput(){
     S.inKey=key;
   }
   renderTodos();renderTdHist();refreshInput();
-  var d0=dayDoc(S.cid,S.date,0)||{};setVal($('fMemo'),d0.fmemo);
-  var mb=$('fMemoBy');if(mb)mb.textContent=d0.fmemo?'작성: '+(d0.fmemoBy==='owner'?'사장':d0.fmemoBy==='staff'?'직원':'–'):'';
 }
 function setVal(inp,v){
   if(!inp||document.activeElement===inp)return;
@@ -2607,7 +2603,6 @@ function bind(){
       return;
     }
     if(t.name==='fts'){S.ftSel=t.value;feedTags();return;}
-    if(t.id==='fMemo'){var mv=t.value.trim();saveDayField(0,'fmemo',mv||null);saveDayField(0,'fmemoBy',mv?(isOwner()?'owner':'staff'):null);return;}
     if(t.classList.contains('qin')){
       var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
       var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
