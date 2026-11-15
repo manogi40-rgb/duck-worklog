@@ -141,6 +141,13 @@ button,input,textarea{font:inherit;color:inherit}
 .fdt td,.fdt th{padding:4px 3px;text-align:center}
 .feedcard .wfield{margin:8px 0}
 #fdet .ftrow{margin:4px 0 8px}
+.falrow{display:flex;align-items:center;gap:8px;padding:2px 0 8px;font-size:14px;color:var(--muted)}
+.falrow[hidden]{display:none}
+.fat{color:var(--accent,#1f7a5a);font-size:15px}
+.ftmain{margin:2px 0 8px}
+.falrow input{flex:1;max-width:160px;height:44px;text-align:right;padding:0 8px;font-size:18px;border:2px solid var(--accent,#1f7a5a);border-radius:8px;background:#fff}
+.fmemo{display:block;margin-top:10px;font-size:14px;color:var(--muted)}
+.fmemo textarea{display:block;width:100%;margin-top:4px;padding:8px;font-size:15px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-family:inherit}
 .hkl{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 .kin{width:96px;height:44px;text-align:right;font-variant-numeric:tabular-nums}
 .kin:disabled{opacity:.45}
@@ -761,7 +768,7 @@ function wxCell(d){
 /* 입력 탭 */
 function cardHTML(h){
   var rows=TYPES.map(function(t){
-    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div>':'';
+    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div><div class="falrow" hidden><span>'+EM('🧮')+'배분</span><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"><span>kg</span><b class="fat"></b></div>':'';
     return '<div class="row"><div class="row-label"><span><span class="ico i-'+t.k+'" aria-hidden="true"></span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
       '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
@@ -787,16 +794,19 @@ function feedTypeFor(h){
 function feedCardHTML(){
   var rows=HOUSES.map(function(h){
     return '<tr><td><b style="color:var(--s'+h+')">'+h+'동</b></td><td data-fn="'+h+'">0</td>'+
-      '<td><input class="frem" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 남은 재고 kg"></td>'+
-      '<td><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"></td></tr>';
+      '<td><input class="frem" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 남은 재고 kg"></td></tr>';
   }).join('');
-  return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고</h2>'+
+  return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고 계산</h2>'+
     '<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
-    '<div id="fdet" hidden><div class="ftrow" role="radiogroup" aria-label="사료 종류">'+FT.map(function(f){
-      return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'<span class="hint">(오늘 입고된 사료)</span></div>'+
-    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>사육수</th><th>남은 재고<br>(kg)</th><th>배분<br>(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="ftrow ftmain" role="radiogroup" aria-label="사료 종류">'+FT.map(function(f){
+      return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'</div>'+
+    '<div id="fdet" hidden>'+
+    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="hint" id="fsum"></div>'+
-    '<button type="button" class="btn p" data-act="fd-save" style="width:100%;margin-top:6px">'+EM('✅')+'동별 사료 기록 저장</button></div></section>';
+    '<div class="hint">배분 결과는 아래 각 동 사료 칸에 표시됩니다. 고쳐서 맞춘 뒤 확인을 누르면 기록됩니다.</div>'+
+    '<button type="button" class="btn p" data-act="fd-save" style="width:100%;margin-top:6px">'+EM('✅')+'확인 (동별 사료 기록)</button></div>'+
+    '<label class="fmemo">'+EM('📝')+'메모<textarea id="fMemo" rows="2" maxlength="300" placeholder="사료 관련 메모"></textarea></label>'+
+    '<div class="hint" id="fMemoBy" style="font-size:11px"></div></section>';
 }
 function feedAlloc(){
   var qty=Number(($('fqIn').value||'').replace(/,/g,''));if(!isFinite(qty)||qty<0)qty=0;
@@ -814,6 +824,10 @@ function feedAlloc(){
   HOUSES.slice().sort(function(a,b){return (al[b]-fl[b])-(al[a]-fl[a]);}).forEach(function(h){if(left>0&&al[h]>0){fl[h]+=1;left--;}});
   return fl;
 }
+function feedTags(){
+  var t=S.ftSel&&ftLabel(S.ftSel)?ftLabel(S.ftSel):'';
+  document.querySelectorAll('.fat').forEach(function(b){b.textContent=t;});
+}
 function feedSumRefresh(){
   var qty=Number(($('fqIn').value||'').replace(/,/g,''))||0,sm=0;
   document.querySelectorAll('.fal').forEach(function(i){sm+=Number((i.value||'').replace(/,/g,''))||0;});
@@ -824,13 +838,13 @@ function feedSumRefresh(){
 function feedRecalc(){
   var fq=$('fqIn');if(!fq)return;
   var has=(Number((fq.value||'').replace(/,/g,''))||0)>0;
-  $('fdet').hidden=!has;if(!has)return;
+  $('fdet').hidden=!has;document.querySelectorAll('.falrow').forEach(function(r){r.hidden=!has;});if(!has)return;
   HOUSES.forEach(function(h){var n=document.querySelector('[data-fn="'+h+'"]');if(n)n.textContent=fmt((S.nowH&&S.nowH[h])||0);});
   var al=feedAlloc();
   HOUSES.forEach(function(h){var i=document.querySelector('.fal[data-h="'+h+'"]');if(i)i.value=al[h]?String(al[h]):'';});
   var sel=S.ftSel&&ftLabel(S.ftSel)?S.ftSel:null;
   document.querySelectorAll('input[name="fts"]').forEach(function(r){r.checked=r.value===sel;});
-  feedSumRefresh();
+  feedTags();feedSumRefresh();
 }
 function feedSave(){
   var type=null;var r=document.querySelector('input[name="fts"]:checked');if(r)type=r.value;
@@ -847,7 +861,7 @@ function feedSave(){
   });
   S.ftSel=type;
   $('fqIn').value='';document.querySelectorAll('.fal,.frem').forEach(function(i){i.value='';});
-  $('fdet').hidden=true;
+  $('fdet').hidden=true;document.querySelectorAll('.falrow').forEach(function(r){r.hidden=true;});
   if(!n)toast('변경할 내용이 없습니다');
 }
 function renderInput(){
@@ -862,6 +876,8 @@ function renderInput(){
     S.inKey=key;
   }
   renderTodos();renderTdHist();refreshInput();
+  var d0=dayDoc(S.cid,S.date,0)||{};setVal($('fMemo'),d0.fmemo);
+  var mb=$('fMemoBy');if(mb)mb.textContent=d0.fmemo?'작성: '+(d0.fmemoBy==='owner'?'사장':d0.fmemoBy==='staff'?'직원':'–'):'';
 }
 function setVal(inp,v){
   if(!inp||document.activeElement===inp)return;
@@ -2590,7 +2606,8 @@ function bind(){
       if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedHeads:vh}).then(function(){toast('저장됨');}).catch(handleErr);
       return;
     }
-    if(t.name==='fts'){S.ftSel=t.value;return;}
+    if(t.name==='fts'){S.ftSel=t.value;feedTags();return;}
+    if(t.id==='fMemo'){var mv=t.value.trim();saveDayField(0,'fmemo',mv||null);saveDayField(0,'fmemoBy',mv?(isOwner()?'owner':'staff'):null);return;}
     if(t.classList.contains('qin')){
       var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
       var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
