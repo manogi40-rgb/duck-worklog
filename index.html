@@ -136,6 +136,11 @@ button,input,textarea{font:inherit;color:inherit}
 .ftsum{color:var(--muted);font-size:13px;padding:0 0 6px}
 .ck{display:flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
 .ck input{width:24px;height:24px;margin:0}
+.hkl[hidden]{display:none}
+.fdt input{width:100%;height:42px;text-align:right;padding:0 6px;font-size:17px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.fdt td,.fdt th{padding:4px 3px;text-align:center}
+.feedcard .wfield{margin:8px 0}
+#fdet .ftrow{margin:4px 0 8px}
 .hkl{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
 .kin{width:96px;height:44px;text-align:right;font-variant-numeric:tabular-nums}
 .kin:disabled{opacity:.45}
@@ -756,9 +761,7 @@ function wxCell(d){
 /* 입력 탭 */
 function cardHTML(h){
   var rows=TYPES.map(function(t){
-    var ftb=t.k==='feed'?'<div class="ftrow" role="radiogroup" aria-label="'+h+'동 사료 종류">'+FT.map(function(f){
-      return '<label class="ck"><input type="radio" name="ft'+h+'" value="'+f.k+'" data-ft="1">'+f.label+'</label>';
-    }).join('')+'</div><div class="ftsum" data-ftsum></div>':'';
+    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div>':'';
     return '<div class="row"><div class="row-label"><span><span class="ico i-'+t.k+'" aria-hidden="true"></span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
       '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
@@ -776,6 +779,77 @@ function cardHTML(h){
     '<div class="memo-label">'+EM('📝')+'비고</div><textarea class="memo" data-h="'+h+'" data-f="memo" aria-label="'+h+'동 비고" placeholder="오늘 특이사항"></textarea>'+
     '<div class="chips" data-chips></div></section>';
 }
+function feedTypeFor(h){
+  var best=null;
+  S.entries.forEach(function(e){if(e&&e.h===h&&e.t==='feed'&&e.d===S.date&&ftLabel(e.ft)&&(!best||(e.at||0)>(best.at||0)))best=e;});
+  return best?best.ft:(S.ftSel&&ftLabel(S.ftSel)?S.ftSel:null);
+}
+function feedCardHTML(){
+  var rows=HOUSES.map(function(h){
+    return '<tr><td><b style="color:var(--s'+h+')">'+h+'동</b></td><td data-fn="'+h+'">0</td>'+
+      '<td><input class="frem" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 남은 재고 kg"></td>'+
+      '<td><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"></td></tr>';
+  }).join('');
+  return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고</h2>'+
+    '<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
+    '<div id="fdet" hidden><div class="ftrow" role="radiogroup" aria-label="사료 종류">'+FT.map(function(f){
+      return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'<span class="hint">(오늘 입고된 사료)</span></div>'+
+    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>사육수</th><th>남은 재고<br>(kg)</th><th>배분<br>(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="hint" id="fsum"></div>'+
+    '<button type="button" class="btn p" data-act="fd-save" style="width:100%;margin-top:6px">'+EM('✅')+'동별 사료 기록 저장</button></div></section>';
+}
+function feedAlloc(){
+  var qty=Number(($('fqIn').value||'').replace(/,/g,''));if(!isFinite(qty)||qty<0)qty=0;
+  var now={},rem={},act=HOUSES.filter(function(h){return (S.nowH&&S.nowH[h])>0;}),al={};
+  HOUSES.forEach(function(h){now[h]=(S.nowH&&S.nowH[h])||0;var r=Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));rem[h]=isFinite(r)&&r>0?r:0;al[h]=0;});
+  var guard=0;
+  while(act.length&&guard++<10){
+    var pool=qty,sn=0;act.forEach(function(h){pool+=rem[h];sn+=now[h];});
+    var neg=act.filter(function(h){return pool*now[h]/sn-rem[h]<0;});
+    if(!neg.length){act.forEach(function(h){al[h]=pool*now[h]/sn-rem[h];});break;}
+    act=act.filter(function(h){return neg.indexOf(h)<0;});
+  }
+  var tot=0,fl={};HOUSES.forEach(function(h){fl[h]=Math.floor(al[h]);tot+=fl[h];});
+  var left=Math.round(qty)-tot;
+  HOUSES.slice().sort(function(a,b){return (al[b]-fl[b])-(al[a]-fl[a]);}).forEach(function(h){if(left>0&&al[h]>0){fl[h]+=1;left--;}});
+  return fl;
+}
+function feedSumRefresh(){
+  var qty=Number(($('fqIn').value||'').replace(/,/g,''))||0,sm=0;
+  document.querySelectorAll('.fal').forEach(function(i){sm+=Number((i.value||'').replace(/,/g,''))||0;});
+  var el=$('fsum');if(!el)return;
+  var ok=Math.abs(sm-qty)<0.5;
+  el.innerHTML='배분 합계 <b>'+fmtN(sm)+'</b> kg / 입고 <b>'+fmtN(qty)+'</b> kg'+(ok?' '+EM('✅'):' <b style="color:var(--bad,#c0392b)">· 차이 '+fmtN(sm-qty)+' kg</b>');
+}
+function feedRecalc(){
+  var fq=$('fqIn');if(!fq)return;
+  var has=(Number((fq.value||'').replace(/,/g,''))||0)>0;
+  $('fdet').hidden=!has;if(!has)return;
+  HOUSES.forEach(function(h){var n=document.querySelector('[data-fn="'+h+'"]');if(n)n.textContent=fmt((S.nowH&&S.nowH[h])||0);});
+  var al=feedAlloc();
+  HOUSES.forEach(function(h){var i=document.querySelector('.fal[data-h="'+h+'"]');if(i)i.value=al[h]?String(al[h]):'';});
+  var sel=S.ftSel&&ftLabel(S.ftSel)?S.ftSel:null;
+  document.querySelectorAll('input[name="fts"]').forEach(function(r){r.checked=r.value===sel;});
+  feedSumRefresh();
+}
+function feedSave(){
+  var type=null;var r=document.querySelector('input[name="fts"]:checked');if(r)type=r.value;
+  if(!type){toast('입고된 사료 종류(크럼블·전기·후기)를 선택하세요');return;}
+  if(!S.db||!S.cid||!S.canWrite)return;
+  var n=0;
+  HOUSES.forEach(function(h){
+    var v=Number((document.querySelector('.fal[data-h="'+h+'"]').value||'').replace(/,/g,''));if(!isFinite(v)||v<0)v=0;
+    var cur=0;S.entries.forEach(function(e){if(e&&e.h===h&&e.t==='feed'&&e.d===S.date&&ftKey(e.ft)===type)cur+=Number(e.q)||0;});
+    var d=Math.round((v-cur)*10)/10;
+    if(d!==0){addEntry(h,'feed',d,null,null,type);n++;}
+    var rv=Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));
+    if(isFinite(rv)&&(document.querySelector('.frem[data-h="'+h+'"]').value||'').trim()!=='')saveDayField(h,'rem',rv);
+  });
+  S.ftSel=type;
+  $('fqIn').value='';document.querySelectorAll('.fal,.frem').forEach(function(i){i.value='';});
+  $('fdet').hidden=true;
+  if(!n)toast('변경할 내용이 없습니다');
+}
 function renderInput(){
   var key=S.cid+'|'+S.date;
   if(S.inKey!==key||!$('houses')){
@@ -784,7 +858,7 @@ function renderInput(){
       '<input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+maxDateOf(cyc())+'" aria-label="날짜">'+
       '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
       '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+todoShell()+
-      '<div class="sumline" id="sumline"></div><div class="houses" id="houses">'+HOUSES.map(cardHTML).join('')+'</div>';
+      '<div class="sumline" id="sumline"></div>'+feedCardHTML()+'<div class="houses" id="houses">'+HOUSES.map(cardHTML).join('')+'</div>';
     S.inKey=key;
   }
   renderTodos();renderTdHist();refreshInput();
@@ -806,7 +880,7 @@ function refreshInput(){
   HOUSES.forEach(function(h){
     var card=pane.querySelector('.house[data-h="'+h+'"]');if(!card)return;
     var init=headsOf(c,h),tot=CUM[h],now=init-tot.cull-tot.dead;
-    nowAll+=now;initAll+=init;
+    nowAll+=now;initAll+=init;(S.nowH=S.nowH||{})[h]=now;
     card.querySelector('[data-now]').textContent=fmt(now);
     card.querySelector('[data-init]').textContent=fmt(init);
     var day=(A.byDate[S.date]||{})[h]||{cull:0,dead:0,feed:0};
@@ -821,7 +895,7 @@ function refreshInput(){
     var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
     if(ckR)ckR.checked=dd.rot===true;
     if(ckH)ckH.checked=dd.hk===true;
-    if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;}
+    if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;var hl2=kg.closest('.hkl');if(hl2)hl2.hidden=!(dd.hk===true);}
     setVal(card.querySelector('textarea'),dd.memo);
     var list=[];
     S.entries.forEach(function(e,id){if(e.d===S.date&&e.h===h)list.push({id:id,e:e});});
@@ -2410,6 +2484,7 @@ function bind(){
       var act=a.dataset.act;
       var cid=a.dataset.cid;
       if(act==='new'){cancelEdit();goHome(true);return;}
+      if(act==='fd-save'){feedSave();return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
       if(act==='td-hist'){toggleHist();return;}
@@ -2486,7 +2561,7 @@ function bind(){
   });
   document.addEventListener('keydown',function(e){
     if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('tdin')){addTodo(e.target.id.replace('tdIn_',''));return;}
-    if(e.key==='Enter'&&e.target.matches&&e.target.matches('.qin,.tin,.hin,.kin,.sfld,.sin,.win,#wIn,#hIn,#dateIn'))e.target.blur();
+    if(e.key==='Enter'&&e.target.matches&&e.target.matches('.qin,.tin,.hin,.kin,.sfld,.sin,.win,#wIn,#hIn,#fqIn,.frem,.fal,#dateIn'))e.target.blur();
   });
   document.addEventListener('change',function(e){
     var t=e.target;if(!t.matches)return;
@@ -2515,11 +2590,7 @@ function bind(){
       if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedHeads:vh}).then(function(){toast('저장됨');}).catch(handleErr);
       return;
     }
-    if(t.dataset&&t.dataset.ft){
-      var qi=t.closest('.house').querySelector('.qin[data-t="feed"]');
-      if(qi&&qi.value.trim())qi.dispatchEvent(new Event('change',{bubbles:true}));
-      return;
-    }
+    if(t.name==='fts'){S.ftSel=t.value;return;}
     if(t.classList.contains('qin')){
       var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
       var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
@@ -2530,9 +2601,7 @@ function bind(){
       if(q===0){t.value='';return;}
       var ftv=null;
       if(t.dataset.t==='feed'){
-        var fr=t.closest('.house').querySelector('input[data-ft]:checked');
-        if(!fr){toast('사료 종류(크럼블·전기·후기)를 먼저 체크하세요');return;}
-        ftv=fr.value;fr.checked=false;
+        ftv=feedTypeFor(Number(t.dataset.h));
       }
       t.value='';sg.classList.remove('neg');sg.textContent='+';sg.setAttribute('aria-pressed','false');
       addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ,ftv);
@@ -2542,7 +2611,7 @@ function bind(){
       var hh=Number(t.dataset.h);
       if(t.dataset.f==='hk'){
         var kg2=t.closest('.works').querySelector('.kin');
-        if(kg2){kg2.disabled=!t.checked;if(!t.checked)kg2.value='';}
+        if(kg2){kg2.disabled=!t.checked;if(!t.checked)kg2.value='';var hl=kg2.closest('.hkl');if(hl)hl.hidden=!t.checked;}
         if(!t.checked)saveDayField(hh,'hkg',null);
       }
       saveDayField(hh,t.dataset.f,t.checked);return;
@@ -2569,6 +2638,8 @@ function bind(){
   document.addEventListener('input',function(e){
     var t=e.target;
     if(t&&t.id==='nTotal'){updatePrev();return;}
+    if(t&&(t.id==='fqIn'||(t.classList&&t.classList.contains('frem')))){feedRecalc();return;}
+    if(t&&t.classList&&t.classList.contains('fal')){feedSumRefresh();return;}
     if(!t.classList||!t.classList.contains('memo'))return;
     var k='memo'+t.dataset.h,h=Number(t.dataset.h),val=t.value;clearTimeout(timers[k]);
     timers[k]=setTimeout(function(){saveDayField(h,'memo',val);},1200);
