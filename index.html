@@ -152,6 +152,16 @@ button,input,textarea{font:inherit;color:inherit}
 .kpi b{font-family:var(--font-display);font-weight:400;font-size:26px;line-height:1.2;font-variant-numeric:tabular-nums}
 .kpi small{color:var(--muted);font-variant-numeric:tabular-nums}
 .kpi.wide{grid-column:1/-1}
+.krow{display:grid;grid-template-columns:repeat(var(--n,3),minmax(0,1fr));gap:6px;margin-bottom:8px}
+.kc{background:var(--bg);border-radius:10px;padding:8px 4px;text-align:center;min-width:0}
+.kc span{display:block;font-size:12px;color:var(--muted);white-space:nowrap}
+.kc b{display:block;font-family:var(--font-display);font-weight:400;font-size:19px;line-height:1.25;font-variant-numeric:tabular-nums}
+.kc small{color:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+#kpis.kpis{display:block}
+.kc .ico{--is:22px;margin-right:2px;display:inline-block;vertical-align:middle}
+.vset{margin-top:8px;border-top:1px solid var(--line);padding-top:8px}
+.vset .big{font-family:var(--font-display);font-weight:400;font-size:21px}
+.vset .ico{--is:28px;margin-right:4px;vertical-align:middle}
 .wfield{display:flex;align-items:center;justify-content:space-between;gap:10px;font-weight:700}
 .wfield span{color:var(--muted);font-weight:400;font-size:13px;margin-left:6px}
 .wfield input{width:130px;height:46px;text-align:right;font-variant-numeric:tabular-nums}
@@ -466,7 +476,7 @@ function subscribeCycle(cid){
     if(cid!==S.cid)return;
     if(!sn.exists&&sn.metadata&&sn.metadata.fromCache)return;
     S.settle=sn.exists?Object.assign({},sn.data()):null;
-    if(S.tab==='settle')refreshSettle();
+    if(S.tab==='settle')refreshSettle();else if(S.tab==='avg')renderAvg();
   };
   if(isOwner()){S.unsubs.push(S.db.doc('settle/'+cid).onSnapshot(onS,onErr));
   S.db.doc('settle/'+cid).get().then(onS).catch(function(){});}
@@ -598,7 +608,7 @@ function render(){
 }
 function updateRO(){
   var ro=!S.canWrite;
-  document.querySelectorAll('#pane-input input,#pane-input textarea,#pane-input .sign,#pane-avg #wIn').forEach(function(e){
+  document.querySelectorAll('#pane-input input,#pane-input textarea,#pane-input .sign,#pane-avg #wIn,#pane-avg #hIn').forEach(function(e){
     if(e.id==='dateIn')return;e.disabled=ro;
   });
   var ns=$('nSave');if(ns)ns.disabled=ro;
@@ -886,8 +896,10 @@ function workText(dd){
 /* 평균 탭 */
 function buildAvg(){
   $('pane-avg').innerHTML=
-    '<section class="card"><h2>'+IC('report')+'싸이클 평균</h2><div class="kpis" id="kpis"></div>'+
+    '<section class="card"><h2>'+IC('report')+'PARTS 평균</h2><div class="kpis" id="kpis"></div>'+
     '<label class="wfield"><div>예상 중량<span>마리당 kg</span></div><input id="wIn" type="text" inputmode="decimal" autocomplete="off" placeholder="예: 3.2"></label>'+
+    '<label class="wfield" style="margin-top:8px"><div>예상 출하 마릿수<span>마리</span></div><input id="hIn" type="text" inputmode="numeric" autocomplete="off" placeholder="현재 마릿수"></label>'+
+    '<div class="vset" id="vset" hidden></div>'+
     '<p class="hint">사료요구율 = 사료 입고 누계 ÷ (현재 사육 마릿수 × 예상 중량)</p></section>'+
     '<section class="card"><h2>'+IC('barn')+'동별 현황</h2><div class="scroll" id="houseTbl"></div></section>'+
     '<section class="card"><div class="cardhead"><h2>'+IC('calendar')+'주간 평균</h2><div id="segW"></div></div><div class="scroll" id="weekTbl"></div></section>';
@@ -909,23 +921,34 @@ function renderAvg(){
   S.days.forEach(function(dd){var tg=dd.h===0?O:T;ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v))tg[f.f].push(v);});});
   var now=initAll-cull-dead,fpp=now>0?feed/now:null,fcr=(w>0&&now>0)?feed/(now*w):null;
   var pct=function(x){return initAll>0?(x/initAll*100).toFixed(2)+'%':'–';};
+  var kc=function(ic,lb,v,sm){return '<div class="kc"><span>'+ic+lb+'</span><b>'+v+'</b>'+(sm?'<small>'+sm+'</small>':'')+'</div>';};
+  var row=function(n,h){return '<div class="krow" style="--n:'+n+'">'+h+'</div>';};
   $('kpis').innerHTML=
-    '<div class="kpi"><span>'+IC('duck')+'현재 사육 마릿수</span><b>'+fmt(now)+'</b><small>서류 입식 '+fmt(Number(c.total)||0)+'수 대비 <b style="display:inline;font-size:inherit">'+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')+'</b> · 서비스 포함 '+fmt(initAll)+'수에서 시작</small></div>'+
-    '<div class="kpi"><span>'+IC('cull')+'도태 누계</span><b>'+fmtN(cull)+'</b><small>'+pct(cull)+'</small></div>'+
-    '<div class="kpi"><span>'+IC('dead')+'폐사 누계</span><b>'+fmtN(dead)+'</b><small>'+pct(dead)+'</small></div>'+
-    '<div class="kpi"><span>'+IC('cull')+IC('dead')+'도태+폐사 합산</span><b>'+fmtN(cull+dead)+'</b><small>'+pct(cull+dead)+'</small></div>'+
-    '<div class="kpi"><span>'+IC('tractor')+'로터리</span><b>'+WT.rot+'<small> 회</small></b></div>'+
-    '<div class="kpi"><span>'+IC('husk')+'왕겨</span><b>'+WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small></b></div>'+
-    '<div class="kpi"><span>'+IC('feed')+'사료 입고 총합산</span><b>'+fmtN(feed)+'<small> kg</small></b></div>'+
-    FT.map(function(f){return '<div class="kpi"><span>'+IC('feed')+f.label+' 합산</span><b>'+fmtN(A.ft[f.k])+'<small> kg</small></b></div>';}).join('')+
-    (A.ft.none?'<div class="kpi"><span>'+IC('feed')+'종류 미지정 합산</span><b>'+fmtN(A.ft.none)+'<small> kg</small></b></div>':'')+
-    '<div class="kpi"><span>'+IC('cart')+'마리당 사료</span><b>'+(fpp==null?'–':fpp.toFixed(2))+'<small> kg</small></b></div>'+
-    '<div class="kpi"><span>'+IC('stats')+'사료요구율</span><b>'+(fcr==null?'–':fcr.toFixed(2))+'</b>'+(w>0?'':'<small>예상 중량을 입력하세요</small>')+'</div>'+
-    '<div class="kpi wide"><span>'+IC('temp')+'평균 온도 (최고 · 최저)</span><b>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'<small> ℃</small></b></div>'+
-    (O.tmax.length||O.tmin.length?'<div class="kpi wide"><span>'+IC('temp')+'외부 평균 온도 (최고 · 최저)</span><b>'+fmtT(mean(O.tmax))+' · '+fmtT(mean(O.tmin))+'<small> ℃</small></b></div>':'')+
-    '<div class="kpi wide"><span>'+IC('humi')+'평균 습도 (최고 · 최저)</span><b>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'<small> %</small></b></div>'+
-    (O.hmax.length||O.hmin.length?'<div class="kpi wide"><span>'+IC('humi')+'외부 평균 습도 (최고 · 최저)</span><b>'+fmtT(mean(O.hmax))+' · '+fmtT(mean(O.hmin))+'<small> %</small></b></div>':'');
+    row(1,kc(IC('duck'),'현재 사육 마릿수',fmt(now),'서류 입식 '+fmt(Number(c.total)||0)+'수 대비 '+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')))+
+    row(3,kc(IC('cull'),'도태',fmtN(cull),pct(cull))+kc(IC('dead'),'폐사',fmtN(dead),pct(dead))+kc(IC('cull')+IC('dead'),'합산',fmtN(cull+dead),pct(cull+dead)))+
+    row(2,kc(IC('tractor'),'로터리',WT.rot+'<small> 회</small>')+kc(IC('husk'),'왕겨',WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small>'))+
+    row(FT.length+(A.ft.none?1:0),FT.map(function(f){return kc(IC('feed'),f.label,fmtN(A.ft[f.k]),'kg');}).join('')+(A.ft.none?kc(IC('feed'),'미지정',fmtN(A.ft.none),'kg'):''))+
+    row(3,kc(IC('feed'),'총합산',fmtN(feed),'kg')+kc(IC('cart'),'마리당',fpp==null?'–':fpp.toFixed(2),'kg')+kc(IC('stats'),'요구율',fcr==null?'–':fcr.toFixed(2),w>0?'':'중량 입력'));
   setVal($('wIn'),c.expectedWeight);
+  setVal($('hIn'),c.expectedHeads);
+  var vs=$('vset');
+  if(vs){
+    if(!isOwner()){vs.hidden=true;}
+    else{
+      var eh=isNum(Number(c.expectedHeads))&&Number(c.expectedHeads)>0?Number(c.expectedHeads):now;
+      if(!(w>0)||!(eh>0)){vs.hidden=false;vs.innerHTML='<div class="hint">'+EM('💰')+'예상 중량을 입력하면 가상 정산금이 계산됩니다</div>';}
+      else{
+        var sh0=(S.settle&&S.settle.ship)||{};
+        var dt=/^\d{4}-\d{2}-\d{2}$/.test(sh0.date||'')?sh0.date:addDays(c.stockDate,41);
+        var vr=calcSettle(c,{heads:eh,W:eh*w,date:dt});
+        var noTerm=!(Number(vr.live)>0);
+        vs.hidden=false;
+        vs.innerHTML='<div class="wfield"><div>'+IC('money')+'가상 정산금</div><b class="big" style="white-space:nowrap">'+(noTerm?'–':(vr.net<0?'−':'')+won(Math.abs(vr.net)))+'</b></div>'+
+          '<div class="hint">'+(noTerm?'정산 탭의 계약 조건(생체 단가 등)을 입력하면 계산됩니다.':
+          fmt(eh)+'마리 × '+w+'kg = '+fmtN(eh*w)+'kg · '+(sh0.date?'출하일 ':'출하일 미입력 → ')+dt+(sh0.date?'':' (42일령 가정)')+' · 마리당 '+won(vr.net/eh)+(vr.etc?' · 기타 비용 포함':''))+'</div>';
+      }
+    }
+  }
   $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
     '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
   $('segW').innerHTML=segHTML();
@@ -1398,8 +1421,9 @@ function periodDaysIn(mk,c,endDate){
   var dim=dimOf(mk),a=c.stockDate>mk+'-01'?c.stockDate:mk+'-01',z=endDate<mk+'-'+p2(dim)?endDate:mk+'-'+p2(dim);
   var n=dayNum(z)-dayNum(a)+1;return n>0?n:0;
 }
-function calcSettle(c){
+function calcSettle(c,ov){
   var d=sdoc(),sh=d.ship||{},tm=d.terms||{},r={};
+  if(ov){sh=Object.assign({},sh,{heads:ov.heads,weights:[ov.W]});if(ov.date)sh.date=ov.date;}
   var ws=(Array.isArray(sh.weights)?sh.weights:[]).filter(isNum);
   r.W=ws.reduce(function(x,y){return x+y;},0);r.nVeh=ws.length;
   r.heads=isNum(sh.heads)&&sh.heads>0?sh.heads:null;
@@ -2461,7 +2485,7 @@ function bind(){
   });
   document.addEventListener('keydown',function(e){
     if(e.key==='Enter'&&e.target.classList&&e.target.classList.contains('tdin')){addTodo(e.target.id.replace('tdIn_',''));return;}
-    if(e.key==='Enter'&&e.target.matches&&e.target.matches('.qin,.tin,.hin,.kin,.sfld,.sin,.win,#wIn,#dateIn'))e.target.blur();
+    if(e.key==='Enter'&&e.target.matches&&e.target.matches('.qin,.tin,.hin,.kin,.sfld,.sin,.win,#wIn,#hIn,#dateIn'))e.target.blur();
   });
   document.addEventListener('change',function(e){
     var t=e.target;if(!t.matches)return;
@@ -2482,6 +2506,12 @@ function bind(){
       var raw=t.value.trim().replace(/,/g,'');var v=raw===''?null:Number(raw);
       if(v!==null&&(!isFinite(v)||v<=0)){toast('예상 중량을 숫자로 입력하세요');return;}
       if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedWeight:v}).then(function(){toast('저장됨');}).catch(handleErr);
+      return;
+    }
+    if(t.id==='hIn'){
+      var rh=t.value.trim().replace(/,/g,'');var vh=rh===''?null:Math.round(Number(rh));
+      if(vh!==null&&(!isFinite(vh)||vh<=0)){toast('마릿수를 숫자로 입력하세요');return;}
+      if(S.db&&S.cid&&S.canWrite)S.db.doc('cycles/'+S.cid).update({expectedHeads:vh}).then(function(){toast('저장됨');}).catch(handleErr);
       return;
     }
     if(t.dataset&&t.dataset.ft){
