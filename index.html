@@ -122,6 +122,10 @@ button,input,textarea{font:inherit;color:inherit}
 .sign{width:46px;height:46px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:22px;font-weight:700;cursor:pointer;line-height:1}
 .sign.neg{background:var(--bad);border-color:var(--bad);color:var(--accent-ink)}
 .temps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.temps .tp{display:flex;align-items:center;gap:3px;min-width:0}
+.temps .tp .ico{--is:26px;flex:none}
+.temps .tp input{flex:1;min-width:0;width:100%;padding:0 4px;font-size:17px;text-align:center}
+.temps .tp i{font-style:normal;color:var(--muted);font-weight:700}
 .temps label{display:flex;flex-direction:column;gap:2px;font-size:13px;color:var(--muted)}
 .tl{display:inline-flex;align-items:center;gap:4px;font-weight:700}
 .tl .ico{--is:24px}
@@ -759,16 +763,13 @@ function cardHTML(h){
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
       '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
   }).join('');
-  var temps=FIELDS.map(function(x){
-    return '<label><span class="tl"><span class="ico i-temp" aria-hidden="true"></span>'+x.label+'</span><input class="tin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="–" aria-label="'+h+'동 '+x.label+' 온도 ℃"></label>';
-  }).join('');
-  var hums=HFIELDS.map(function(x){
-    return '<label><span class="tl"><span class="ico i-humi" aria-hidden="true"></span>'+x.label+'</span><input class="hin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="–" aria-label="'+h+'동 '+x.label+' 습도 %"></label>';
-  }).join('');
+  var pair=function(arr,cls,ic,unit,nm){return '<div class="tp"><span class="ico i-'+ic+'" aria-hidden="true"></span>'+arr.map(function(x){
+    return '<input class="'+cls+'" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="'+x.f+'" placeholder="'+x.label+'" aria-label="'+h+'동 '+x.label+' '+nm+' '+unit+'">';
+  }).join('<i>/</i>')+'</div>';};
+  var temps=pair(FIELDS,'tin','temp','℃','온도'),hums=pair(HFIELDS,'hin','humi','%','습도');
   return '<section class="house" data-h="'+h+'"><div class="house-head"><div><h3 style="--hc:var(--s'+h+')"><span class="hn">'+h+'동</span></h3></div>'+
     '<div class="house-now"><b data-now>0</b>'+IC('duck',24)+'남은 수 · 입식 <span data-init>0</span></div></div>'+rows+
-    '<div class="temps">'+temps+'</div>'+
-    '<div class="temps hums">'+hums+'</div>'+
+    '<div class="temps one">'+temps+hums+'</div>'+
     '<div class="works"><label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
     '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="hk" aria-label="'+h+'동 왕겨 작업"><span class="ico i-husk" aria-hidden="true"></span>왕겨</label>'+
     '<label class="hkl">kg<input class="kin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="hkg" placeholder="kg" aria-label="'+h+'동 왕겨 kg" disabled></label></div>'+
@@ -816,7 +817,7 @@ function refreshInput(){
     var fs=card.querySelector('[data-ftsum]');
     if(fs){var cf=CUMF[h];fs.textContent='누계  '+FT.map(function(f){return f.label+' '+fmtN(cf[f.k]);}).join(' · ')+(cf.none?' · 미지정 '+fmtN(cf.none):'')+' · 합 '+fmtN(tot.feed)+' kg';}
     var dd=dayDoc(S.cid,S.date,h)||{};
-    ALLF.forEach(function(x){var inp=card.querySelector('[data-f="'+x.f+'"]');setVal(inp,dd[x.f]);if(inp){var lv=thv(dd,x.f);inp.placeholder=(!isNum(dd[x.f])&&lv!=null)?fmtT(lv):'–';}});
+    ALLF.forEach(function(x){var inp=card.querySelector('[data-f="'+x.f+'"]');setVal(inp,dd[x.f]);if(inp){var lv=thv(dd,x.f);inp.placeholder=(!isNum(dd[x.f])&&lv!=null)?fmtT(lv):x.label;}});
     var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
     if(ckR)ckR.checked=dd.rot===true;
     if(ckH)ckH.checked=dd.hk===true;
@@ -944,11 +945,8 @@ function renderAvg(){
         var noTerm=!(Number(vr.live)>0);
         vs.hidden=false;
         vs.innerHTML='<div class="wfield"><div>'+IC('money')+'가상 정산금</div><b class="big" style="white-space:nowrap">'+(noTerm?'–':(vr.net<0?'−':'')+won(Math.abs(vr.net)))+'</b></div>'+
-          '<div class="hint">'+(noTerm?'정산 탭의 계약 조건(생체 단가 등)을 입력하면 계산됩니다.':
-          '<div class="krow" style="--n:2;margin:8px 0">'+kc(IC('money'),'마리당 단가',(vr.netNoEtc<0?'−':'')+won(Math.abs(vr.netNoEtc/eh)),'기타 비용 제외')+kc(IC('stats'),'사료요구율',(vr.feed/(eh*w)).toFixed(3),'입고 '+fmtN(vr.feed)+'kg ÷ '+fmtN(eh*w)+'kg')+'</div>'+
-          '<table class="tbl stmt"><tbody>'+
-            [['생체 대금',fmtN(eh*w)+'kg × '+fmt(nz(((S.settle||{}).terms||{}).live))+'원',vr.live],['보조금 합계','친환경·기타·연료·깔짚 등',vr.income-vr.live],['병아리 대금',fmt(vr.total)+'마리(서류)',-vr.chick],['사료 대금','지금까지 입고분 '+fmtN(vr.feed)+'kg만 반영',-vr.feedCost],['자조금','',-vr.jajo],['기타 비용','',-vr.etc]].map(function(x){return '<tr><td>'+x[0]+(x[1]?'<small>'+x[1]+'</small>':'')+'</td><td>'+(x[2]<0?'−':'')+won(Math.abs(x[2]))+'</td></tr>';}).join('')+'</tbody></table>'+
-          fmt(eh)+'마리 × '+w+'kg = '+fmtN(eh*w)+'kg · '+(sh0.date?'출하일 ':'출하일 미입력 → ')+dt+(sh0.date?'':' (42일령 가정)')+' · 마리당 '+won(vr.net/eh)+(vr.etc?' · 기타 비용 포함':''))+'</div>';
+          (noTerm?'<div class="hint">정산 탭의 계약 조건(생체 단가 등)을 입력하면 계산됩니다.</div>':
+          '<div class="krow" style="--n:2;margin:8px 0 0">'+kc(IC('money'),'마리당 단가',(vr.netNoEtc<0?'−':'')+won(Math.abs(vr.netNoEtc/eh)),'기타 비용 제외')+kc(IC('stats'),'사료요구율',(vr.feed/(eh*w)).toFixed(3))+'</div>');
       }
     }
   }
