@@ -145,7 +145,8 @@ button,input,textarea{font:inherit;color:inherit}
 .falrow[hidden]{display:none}
 .fat{color:var(--accent,#1f7a5a);font-size:15px}
 .ftmain{margin:2px 0 8px}
-.falrow input{flex:1;max-width:160px;height:44px;text-align:right;padding:0 8px;font-size:18px;border:2px solid var(--accent,#1f7a5a);border-radius:8px;background:#fff}
+.falrow .btn{flex:none;min-height:44px;padding:0 12px;margin-left:auto}
+.falrow input{flex:1;max-width:120px;height:44px;text-align:right;padding:0 8px;font-size:18px;border:2px solid var(--accent,#1f7a5a);border-radius:8px;background:#fff}
 .fmemo{display:block;margin-top:10px;font-size:14px;color:var(--muted)}
 .fmemo textarea{display:block;width:100%;margin-top:4px;padding:8px;font-size:15px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-family:inherit}
 .hkl{display:flex;align-items:center;gap:6px;font-size:14px;color:var(--muted)}
@@ -767,7 +768,7 @@ function wxCell(d){
 /* 입력 탭 */
 function cardHTML(h){
   var rows=TYPES.map(function(t){
-    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div><div class="falrow" hidden><span>'+EM('🧮')+'배분</span><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"><span>kg</span><b class="fat"></b></div>':'';
+    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div><div class="falrow" hidden><span>'+EM('🧮')+'배분<b class="fat"></b></span><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"><span>kg</span><button type="button" class="btn p" data-act="fd-ok" data-h="'+h+'">'+EM('✅')+'확인</button></div>':'';
     return '<div class="row"><div class="row-label"><span><span class="ico i-'+t.k+'" aria-hidden="true"></span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
       '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
@@ -797,13 +798,11 @@ function feedCardHTML(){
   }).join('');
   return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고 계산</h2>'+
     '<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
-    '<div class="ftrow ftmain" role="radiogroup" aria-label="사료 종류">'+FT.map(function(f){
+    '<div id="fdet" hidden><div class="ftrow ftmain" role="radiogroup" aria-label="사료 종류">'+EM('🍽️')+'<b>종류</b>'+FT.map(function(f){
       return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'</div>'+
-    '<div id="fdet" hidden>'+
     '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="hint" id="fsum"></div>'+
-    '<div class="hint">배분 결과는 아래 각 동 사료 칸에 표시됩니다. 고쳐서 맞춘 뒤 확인을 누르면 기록됩니다.</div>'+
-    '<button type="button" class="btn p" data-act="fd-save" style="width:100%;margin-top:6px">'+EM('✅')+'확인 (동별 사료 기록)</button></div>'+
+    '<div class="hint">배분 결과가 아래 각 동 사료 칸에 표시됩니다. 동마다 고쳐서 맞춘 뒤 그 동의 확인을 누르면 기록됩니다.</div></div>'+
     '</section>';
 }
 function feedAlloc(){
@@ -844,23 +843,22 @@ function feedRecalc(){
   document.querySelectorAll('input[name="fts"]').forEach(function(r){r.checked=r.value===sel;});
   feedTags();feedSumRefresh();
 }
-function feedSave(){
+function feedSave(h){
   var type=null;var r=document.querySelector('input[name="fts"]:checked');if(r)type=r.value;
   if(!type){toast('입고된 사료 종류(크럼블·전기·후기)를 선택하세요');return;}
   if(!S.db||!S.cid||!S.canWrite)return;
-  var n=0;
-  HOUSES.forEach(function(h){
-    var v=Number((document.querySelector('.fal[data-h="'+h+'"]').value||'').replace(/,/g,''));if(!isFinite(v)||v<0)v=0;
-    var cur=0;S.entries.forEach(function(e){if(e&&e.h===h&&e.t==='feed'&&e.d===S.date&&ftKey(e.ft)===type)cur+=Number(e.q)||0;});
-    var d=Math.round((v-cur)*10)/10;
-    if(d!==0){addEntry(h,'feed',d,null,null,type);n++;}
-    var rv=Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));
-    if(isFinite(rv)&&(document.querySelector('.frem[data-h="'+h+'"]').value||'').trim()!=='')saveDayField(h,'rem',rv);
-  });
+  var fi=document.querySelector('.fal[data-h="'+h+'"]');
+  var v=Number((fi.value||'').replace(/,/g,''));if(!isFinite(v)||v<0)v=0;
+  var cur=0;S.entries.forEach(function(e){if(e&&e.h===h&&e.t==='feed'&&e.d===S.date&&ftKey(e.ft)===type)cur+=Number(e.q)||0;});
+  var d=Math.round((v-cur)*10)/10;
+  if(d!==0)addEntry(h,'feed',d,null,null,type);else toast('변경할 내용이 없습니다');
+  var ri=document.querySelector('.frem[data-h="'+h+'"]');
+  if(ri&&(ri.value||'').trim()!==''){var rv=Number(ri.value.replace(/,/g,''));if(isFinite(rv))saveDayField(h,'rem',rv);}
   S.ftSel=type;
-  $('fqIn').value='';document.querySelectorAll('.fal,.frem').forEach(function(i){i.value='';});
-  $('fdet').hidden=true;document.querySelectorAll('.falrow').forEach(function(r){r.hidden=true;});
-  if(!n)toast('변경할 내용이 없습니다');
+  fi.value='';var row=fi.closest('.falrow');if(row)row.hidden=true;
+  var left=Array.prototype.filter.call(document.querySelectorAll('.falrow'),function(x){return !x.hidden;}).length;
+  if(!left){$('fqIn').value='';document.querySelectorAll('.frem').forEach(function(x){x.value='';});$('fdet').hidden=true;}
+  else feedSumRefresh();
 }
 function renderInput(){
   var key=S.cid+'|'+S.date;
@@ -2496,7 +2494,7 @@ function bind(){
       var act=a.dataset.act;
       var cid=a.dataset.cid;
       if(act==='new'){cancelEdit();goHome(true);return;}
-      if(act==='fd-save'){feedSave();return;}
+      if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
       if(act==='td-hist'){toggleHist();return;}
