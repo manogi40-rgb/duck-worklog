@@ -399,6 +399,15 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .seg button[aria-pressed=true]{color:var(--accent-ink)}
 .lg{background:var(--surface2);min-height:44px}
 .gsvg text{font-size:12px;font-family:var(--font-display)}
+.gzoom{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:10px}
+.gzoom button{min-width:52px;height:50px;padding:0 12px;border-radius:14px;border:1px solid var(--line);background:var(--surface2);color:var(--ink);font-size:22px;font-weight:700;cursor:pointer}
+.gzoom button:active{transform:scale(.96)}
+.gzoom button[disabled]{opacity:.35;cursor:default}
+.gzoom button.wk{font-size:16px;color:var(--muted);min-width:48px}
+.gzoom button[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.gzoom button.all{font-size:16px}
+.gzoom .zr{flex-basis:100%;font-size:14px;color:var(--muted)}
+.gzoom .zr b{color:var(--accent);font-family:var(--font-display);font-size:17px}
 .ln{stroke-width:2.5}
 .rotd{fill:var(--bg)}
 .gtip{background:var(--surface2);box-shadow:0 8px 24px rgba(0,0,0,.5)}
@@ -459,8 +468,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
   <button type="button" class="tab" role="tab" data-tab="home" aria-selected="true"><span class="ico i-barn" aria-hidden="true"></span><span>입식</span></button>
   <button type="button" class="tab" role="tab" data-tab="input" aria-selected="false"><span class="ico i-log" aria-hidden="true"></span><span>입력</span></button>
   <button type="button" class="tab" role="tab" data-tab="log" aria-selected="false"><span class="ico i-calendar" aria-hidden="true"></span><span>기록</span></button>
-  <button type="button" class="tab" role="tab" data-tab="avg" aria-selected="false"><span class="ico i-report" aria-hidden="true"></span><span>평균</span></button>
-  <button type="button" class="tab" role="tab" data-tab="graph" aria-selected="false"><span class="ico i-stats" aria-hidden="true"></span><span>그래프</span></button>
+  <button type="button" class="tab" role="tab" data-tab="avg" aria-selected="false"><span class="ico i-report" aria-hidden="true"></span><span>집계</span></button>
+  <button type="button" class="tab" role="tab" data-tab="graph" aria-selected="false"><span class="ico i-stats" aria-hidden="true"></span><span>통계</span></button>
   <button type="button" class="tab" role="tab" data-tab="settle" aria-selected="false"><span class="ico i-settle" aria-hidden="true"></span><span>정산</span></button>
 </nav>
 
@@ -1097,7 +1106,7 @@ function workText(dd){
 /* 평균 탭 */
 function buildAvg(){
   $('pane-avg').innerHTML=
-    '<section class="card"><h2>'+IC('report')+'PARTS 평균</h2><div class="kpis" id="kpis"></div>'+
+    '<section class="card"><h2>'+IC('report')+'PARTS 집계</h2><div class="kpis" id="kpis"></div>'+
     '<label class="wfield"><div>예상 중량<span>마리당 kg</span></div><input id="wIn" type="text" inputmode="decimal" autocomplete="off" placeholder="예: 3.2"></label>'+
     '<label class="wfield" style="margin-top:8px"><div>예상 출하 마릿수<span>마리</span></div><input id="hIn" type="text" inputmode="numeric" autocomplete="off" placeholder="현재 마릿수"></label>'+
     '<div class="vset" id="vset" hidden></div>'+
@@ -1116,7 +1125,7 @@ function renderAvg(){
     var init=headsOf(c,h),t=A.tot[h],now=init-t.cull-t.dead;
     initAll+=init;cull+=t.cull;dead+=t.dead;feed+=t.feed;
     var fpp=now>0?t.feed/now:null,fcr=(w>0&&now>0)?t.feed/(now*w):null;
-    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
+    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td>'+pct2(t.dead,init)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
   }).join('');
   var O={tmax:[],tmin:[],hmax:[],hmin:[]};
   S.days.forEach(function(dd){var tg=dd.h===0?O:T;ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v))tg[f.f].push(v);});});
@@ -1150,17 +1159,20 @@ function renderAvg(){
       }
     }
   }
-  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
-    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
+  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('dead')+'폐사율</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
+    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+pct2(dead,initAll)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
   $('segW').innerHTML=segHTML();
   $('weekTbl').innerHTML=weekHTML(c,A);
+  var hn=$('houseTbl');if(hn&&!$('drNote'))hn.insertAdjacentHTML('afterend','<p class="hint" id="drNote">폐사율 = 폐사 누계 ÷ 입식 마릿수(서비스 2% 포함)</p>');
 }
 function weekHTML(c,A){
   var hs=selHouses();
   var maxAge=Math.max(1,ageOf(c,todayStr()));
   A.dates.forEach(function(d){var a=ageOf(c,d);if(a>=1)maxAge=Math.max(maxAge,a);});
   var nW=Math.min(7,Math.ceil(maxAge/7));
-  var rows=[];
+  var rows=[],init=0;
+  hs.forEach(function(h){init+=headsOf(c,h);});
+  var gone=0,deadCum=0; /* 앞 주차까지 줄어든 마릿수(도태+폐사)와 폐사 누계 */
   for(var wk=1;wk<=nW;wk++){
     var lo=(wk-1)*7+1,hi=wk*7,cull=0,dead=0,feed=0,has=false,T={tmax:[],tmin:[],hmax:[],hmin:[]};
     A.dates.forEach(function(d){
@@ -1171,11 +1183,15 @@ function weekHTML(c,A){
         if(dd)ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v)){T[f.f].push(v);has=true;}});
       });
     });
+    var start=init-gone;
+    gone+=cull+dead;deadCum+=dead;
     rows.push('<tr><td>'+wk+'주차<br><small class="hint">'+lo+'~'+hi+'일령</small></td>'+
-      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
+      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+pct2(dead,start)+'<br><small class="hint">누계 '+pct2(deadCum,init)+'</small></td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
   }
-  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>';
+  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('dead')+'폐사율</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
+    '<p class="hint">주차 폐사율 = 그 주 폐사 ÷ 그 주 시작 때 마릿수 · 누계 = 그 주까지 폐사 누계 ÷ 입식 마릿수</p>';
 }
+function pct2(n,d){return d>0?(n/d*100).toFixed(2)+'%':'–';}
 
 /* ---------- 입식 탭: 등록 · 목록 · 수정 · 백업 · 복원 ---------- */
 function cycleById(id){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===id)return S.cycles[i];}return null;}
@@ -2212,14 +2228,26 @@ function renderGraph(){
     var W=Math.max(300,Math.min(pane.clientWidth||340,920)),H=300,L=46,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B;
     var xs=all.map(function(p){return p.x;}),ys=all.map(function(p){return p.y;});
     var xmin=Math.floor(Math.min.apply(null,xs)),xmax=Math.ceil(Math.max.apply(null,xs));if(xmax-xmin<3)xmax=xmin+3;
+    /* 확대: 보고 싶은 일령 구간만 그리고, 세로축도 그 구간 값에 맞춘다(새로 읽지 않음) */
+    var zk=S.cid+'|'+g.mode;if(g.zoomKey!==zk){g.zoom=null;g.zoomWk=null;g.zoomKey=zk;}
+    var fx0=xmin,fx1=xmax,zoomed=false;
+    if(g.zoom){
+      var za=Math.max(fx0,g.zoom[0]),zb=Math.min(fx1,g.zoom[1]);
+      if(zb-za>=1&&(za>fx0||zb<fx1)){xmin=za;xmax=zb;zoomed=true;}else{g.zoom=null;g.zoomWk=null;}
+    }
+    if(zoomed){
+      var inR=all.filter(function(p){return p.x>=xmin-0.5&&p.x<=xmax+0.5;});
+      if(inR.length)ys=inR.map(function(p){return p.y;});
+    }
     var lo=isEnv(g.metric)?Math.min.apply(null,ys):0,hi=Math.max.apply(null,ys);
     if(isEnv(g.metric)){var pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;}else if(!(hi>0))hi=1;
     var nt=niceTicks(lo,hi,5),yt=nt.ticks,ymin=yt[0],ymax=yt[yt.length-1];
     var sx=function(x){return L+(x-xmin)/(xmax-xmin)*pw;},sy=function(y){return T+ph-(y-ymin)/(ymax-ymin)*ph;};
-    var span=xmax-xmin,xstep=span<=10?1:span<=20?2:span<=40?5:7,svg='';
+    var span=xmax-xmin,xstep=span<=10?1:span<=20?2:span<=40?5:7,svg='<defs><clipPath id="gclip"><rect x="'+(L-6)+'" y="'+(T-8)+'" width="'+(pw+12)+'" height="'+(ph+16)+'"/></clipPath></defs>';
     yt.forEach(function(v){svg+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+sy(v).toFixed(1)+'" y2="'+sy(v).toFixed(1)+'"/><text x="'+(L-6)+'" y="'+(sy(v)+4).toFixed(1)+'" text-anchor="end">'+v.toFixed(nt.dec)+'</text>';});
     svg+='<line class="ga" x1="'+L+'" x2="'+(W-R)+'" y1="'+(T+ph)+'" y2="'+(T+ph)+'"/>';
     for(var xv=Math.ceil(xmin/xstep)*xstep;xv<=xmax;xv+=xstep){svg+='<text x="'+sx(xv).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+xv+'일령</text>';}
+    svg+='<g clip-path="url(#gclip)">';
     vis.forEach(function(s){
       if(!s.pts.length)return;
       var d=s.pts.map(function(p,i){return (i?'L':'M')+sx(p.x).toFixed(1)+' '+sy(p.y).toFixed(1);}).join('');
@@ -2227,13 +2255,40 @@ function renderGraph(){
       if(hasRotMark(g.metric))s.pts.forEach(function(p){if(p.rot)svg+='<circle class="rotd" cx="'+sx(p.x).toFixed(1)+'" cy="'+sy(p.y).toFixed(1)+'" r="5.5" style="stroke:'+s.color+'"/>';});
       if(s.pts.length===1)svg+='<circle cx="'+sx(s.pts[0].x).toFixed(1)+'" cy="'+sy(s.pts[0].y).toFixed(1)+'" r="4" style="fill:'+s.color+'"/>';
     });
+    svg+='</g>';
     svg+='<line id="gcur" class="gcur" y1="'+T+'" y2="'+(T+ph)+'" style="display:none"/><g id="gdots"></g>'+
       '<rect id="ghit" x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>';
-    body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+m.label+' 비교 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg><div class="gtip" id="gtip" style="display:none"></div></div>';
-    GH={vis:vis,m:m,sx:sx,sy:sy,W:W,H:H,L:L,R:R,T:T,ph:ph,pw:pw,xmin:xmin,xmax:xmax,cm:cm};
+    var nWk=Math.min(7,Math.ceil(fx1/7)),wkSel=zoomed&&g.zoomWk?String(g.zoomWk):'';
+    var zctl='<div class="gzoom" role="group" aria-label="그래프 확대">'+
+      '<button type="button" data-gz="in" aria-label="확대">＋</button><button type="button" data-gz="out" aria-label="축소"'+(zoomed?'':' disabled')+'>－</button>'+
+      '<button type="button" data-gz="left" aria-label="앞쪽으로"'+(zoomed&&xmin>fx0?'':' disabled')+'>◀</button><button type="button" data-gz="right" aria-label="뒤쪽으로"'+(zoomed&&xmax<fx1?'':' disabled')+'>▶</button>'+
+      '<button type="button" class="all" data-gz="all" aria-pressed="'+(!zoomed)+'">전체</button>'+
+      (nWk>1?Array.apply(null,Array(nWk)).map(function(_,i){var n=i+1;return '<button type="button" class="wk" data-gz="w'+n+'" aria-pressed="'+(wkSel===String(n))+'">'+n+'주</button>';}).join(''):'')+
+      '<span class="zr">'+(zoomed?'<b>'+Math.max(1,Math.ceil(xmin-0.05))+'~'+Math.floor(xmax+0.05)+'일령</b> 확대해서 보는 중 · ':'')+'그래프를 두 손가락으로 벌리거나 오므려도 됩니다</span></div>';
+    body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+m.label+' 비교 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg><div class="gtip" id="gtip" style="display:none"></div></div>'+zctl;
+    GH={vis:vis,m:m,sx:sx,sy:sy,W:W,H:H,L:L,R:R,T:T,ph:ph,pw:pw,xmin:xmin,xmax:xmax,cm:cm,fx0:fx0,fx1:fx1};
   }
   pane.innerHTML='<div class="card">'+ctl+legend+cap+body+(cm&&S.cycles.length>=2?cycSummaryHTML():'')+'</div>';
   if(GH)bindGraphHover();
+}
+function graphZoom(act,ctr){
+  var G=GH,g=S.g;if(!G)return;
+  var a=G.xmin,b=G.xmax,f0=G.fx0,f1=G.fx1,full=f1-f0,sp=b-a,c=ctr==null?(a+b)/2:ctr;
+  g.zoomWk=null;
+  if(act==='all'){g.zoom=null;}
+  else if(act==='in'||act==='out'||typeof act==='number'){
+    var ns=typeof act==='number'?sp/act:act==='in'?sp/2:sp*2;
+    ns=Math.max(3,ns);
+    if(ns>=full)g.zoom=null;
+    else{var na=c-ns/2,nb=c+ns/2;if(na<f0){nb+=f0-na;na=f0;}if(nb>f1){na-=nb-f1;nb=f1;}g.zoom=[Math.max(f0,na),Math.min(f1,nb)];}
+  }else if(act==='left'||act==='right'){
+    var d=(act==='left'?-1:1)*sp/2,na2=a+d,nb2=b+d;
+    if(na2<f0){nb2+=f0-na2;na2=f0;}if(nb2>f1){na2-=nb2-f1;nb2=f1;}
+    g.zoom=[na2,nb2];
+  }else if(/^w\d$/.test(act)){
+    var n=Number(act.slice(1));g.zoom=[(n-1)*7+0.6,n*7+0.9];g.zoomWk=n;
+  }
+  renderGraph();
 }
 function bindGraphHover(){
   var svg=$('gsvg'),hit=$('ghit'),cur=$('gcur'),dots=$('gdots'),tip=$('gtip'),wrap=$('gwrap');
@@ -2268,9 +2323,31 @@ function bindGraphHover(){
     tip.style.left=Math.max(0,left)+'px';
   }
   function leave(){cur.style.display='none';dots.innerHTML='';tip.style.display='none';}
-  hit.addEventListener('pointermove',move);
-  hit.addEventListener('pointerdown',move);
-  hit.addEventListener('pointerleave',leave);
+  /* 두 손가락 확대·축소: 손을 뗄 때 한 번만 다시 그린다(버벅임 방지) */
+  var pts={},pin=null;
+  function pdist(){var k=Object.keys(pts);if(k.length<2)return 0;return Math.abs(pts[k[0]].x-pts[k[1]].x);}
+  function pmid(){var k=Object.keys(pts),r=svg.getBoundingClientRect();var px=((pts[k[0]].x+pts[k[1]].x)/2-r.left)*(G.W/r.width);return G.xmin+(px-G.L)/G.pw*(G.xmax-G.xmin);}
+  hit.addEventListener('pointerdown',function(e){
+    pts[e.pointerId]={x:e.clientX};
+    if(Object.keys(pts).length===2){pin={d0:pdist(),c:pmid()};leave();}
+    else move(e);
+  });
+  hit.addEventListener('pointermove',function(e){
+    if(pts[e.pointerId])pts[e.pointerId].x=e.clientX;
+    if(pin){var d=pdist();if(pin.d0>20&&d>0){svg.style.transformOrigin='center';svg.style.transform='scaleX('+Math.max(.4,Math.min(3,d/pin.d0)).toFixed(3)+')';}return;}
+    move(e);
+  });
+  function end(e){
+    if(pin){
+      var d=pdist(),f=pin.d0>20?d/pin.d0:1,c=pin.c;svg.style.transform='';pin=null;pts={};
+      if(f>1.15||f<0.87)graphZoom(f,c);
+      return;
+    }
+    delete pts[e.pointerId];
+  }
+  hit.addEventListener('pointerup',end);
+  hit.addEventListener('pointercancel',end);
+  hit.addEventListener('pointerleave',function(e){if(!pin){delete pts[e.pointerId];leave();}});
 }
 
 /* ---------- 엑셀로 받기: 입식·내용·동을 골라서 선택한 것만 ---------- */
@@ -2464,6 +2541,8 @@ function bind(){
     if(gc){S.g.cum=gc.dataset.gc==='1';renderGraph();return;}
     var gv=e.target.closest('[data-gv]');
     if(gv){S.g.table=gv.dataset.gv==='1';renderGraph();return;}
+    var gz=e.target.closest('[data-gz]');
+    if(gz){if(!gz.disabled)graphZoom(gz.dataset.gz);return;}
     var gmo=e.target.closest('[data-gmode]');
     if(gmo){S.g.mode=gmo.dataset.gmode;renderGraph();return;}
     var gsc=e.target.closest('[data-gsc]');
