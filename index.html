@@ -2857,6 +2857,38 @@ $('loginForm').addEventListener('submit',function(e){
 });
 $('fbOut').addEventListener('click',function(){auth.signOut();});
 if('serviceWorker' in navigator){try{navigator.serviceWorker.register('sw.js').catch(function(){});}catch(e){}}
+/* 화면을 옆으로 밀어 탭 넘기기: 왼쪽으로 밀면 다음 탭, 오른쪽으로 밀면 앞 탭.
+   그래프·옆으로 스크롤되는 표·입력칸 위에서는 작동하지 않는다 */
+(function(){
+  var sx=0,sy=0,st=0,ok=false;
+  function blocked(el){
+    for(var n=el;n&&n!==document.body;n=n.parentElement){
+      if(n.id==='gwrap'||n.id==='gsvg'||n.classList&&(n.classList.contains('tabs')||n.classList.contains('gzoom')))return true;
+      var tg=n.tagName;if(tg==='INPUT'||tg==='TEXTAREA'||tg==='SELECT')return true;
+      if(n.scrollWidth>n.clientWidth+4){var ov=getComputedStyle(n).overflowX;if(ov==='auto'||ov==='scroll')return true;}
+    }
+    return false;
+  }
+  document.addEventListener('touchstart',function(e){
+    ok=false;if(e.touches.length!==1)return;
+    var t=e.touches[0];sx=t.clientX;sy=t.clientY;st=Date.now();
+    ok=!!document.querySelector('.tab')&&!blocked(e.target)&&sx>16&&sx<window.innerWidth-16;
+  },{passive:true});
+  document.addEventListener('touchend',function(e){
+    if(!ok)return;ok=false;
+    var t=e.changedTouches[0],dx=t.clientX-sx,dy=t.clientY-sy;
+    if(Date.now()-st>800||Math.abs(dx)<80||Math.abs(dy)>Math.abs(dx)*0.5)return;
+    var sel=window.getSelection&&String(window.getSelection());if(sel)return;
+    var tabs=Array.prototype.filter.call(document.querySelectorAll('.tab'),function(b){return !b.hidden&&b.offsetParent!==null;});
+    var i=-1;tabs.forEach(function(b,k){if(b.getAttribute('aria-selected')==='true')i=k;});
+    if(i<0)return;
+    var j=dx<0?i+1:i-1;if(j<0||j>=tabs.length)return;
+    tabs[j].click();
+    var v=document.querySelector('main');
+    if(v&&v.animate&&!(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches))
+      v.animate([{transform:'translateX('+(dx<0?40:-40)+'px)',opacity:.4},{transform:'none',opacity:1}],{duration:180,easing:'ease-out'});
+  },{passive:true});
+})();
 })();
 </script>
 </body></html>
