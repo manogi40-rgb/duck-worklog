@@ -585,6 +585,13 @@ function agg(){
 }
 function dayDoc(cid,d,h){return S.days.get(cid+'_'+d+'_'+h)||null;}
 function headsOf(c,h){return Number(c.heads&&c.heads[h])||0;}
+/* 성적 계산 기준 = 서류 입식 마릿수(서비스 2% 제외). 전체 동이면 등록한 입식 마릿수, 일부 동이면 배분 마릿수 ÷ 1.02 */
+function docOf(c,hs){
+  var init=0;hs.forEach(function(h){init+=headsOf(c,h);});
+  if(hs.length>=HOUSES.length&&Number(c.total)>0)return Number(c.total);
+  var r=Number(c.serviceRate);if(!(r>=0))r=SERVICE;
+  return init/(1+r);
+}
 
 /* ---------- 구독 ---------- */
 function subscribeCycle(cid){
@@ -890,7 +897,7 @@ function wxCell(d){
 /* 입력 탭 */
 function cardHTML(h){
   var rows=TYPES.map(function(t){
-    var ftb=t.k==='feed'?'<div class="ftsum" data-ftsum></div><div class="falrow" hidden><span>'+EM('🧮')+'배분<b class="fat"></b></span><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"><span>kg</span><button type="button" class="btn p" data-act="fd-ok" data-h="'+h+'">'+EM('✅')+'확인</button></div>':'';
+    var ftb=t.k==='feed'?'<div class="falrow" hidden><span>'+EM('🧮')+'배분<b class="fat"></b></span><input class="fal" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 배분 kg"><span>kg</span><button type="button" class="btn p" data-act="fd-ok" data-h="'+h+'">'+EM('✅')+'확인</button></div>':'';
     return '<div class="row r-'+t.k+'"><div class="row-label"><span><span class="ico i-'+t.k+'" aria-hidden="true"></span>'+t.label+'</span><small data-sum="'+t.k+'"></small></div>'+
       '<div class="qty"><input class="qin" type="text" inputmode="'+(t.int?'numeric':'decimal')+'" autocomplete="off" placeholder="수량" data-h="'+h+'" data-t="'+t.k+'" aria-label="'+h+'동 '+t.label+' 수량">'+
       '<button type="button" class="sign" data-sign aria-pressed="false" aria-label="'+h+'동 '+t.label+' 더하기/빼기 전환">+</button></div></div>'+ftb;
@@ -1125,16 +1132,17 @@ function renderAvg(){
     var init=headsOf(c,h),t=A.tot[h],now=init-t.cull-t.dead;
     initAll+=init;cull+=t.cull;dead+=t.dead;feed+=t.feed;
     var fpp=now>0?t.feed/now:null,fcr=(w>0&&now>0)?t.feed/(now*w):null;
-    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td>'+pct2(t.dead,init)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
+    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td><b>'+pct2(t.cull+t.dead,docOf(c,[h]))+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
   }).join('');
   var O={tmax:[],tmin:[],hmax:[],hmin:[]};
   S.days.forEach(function(dd){var tg=dd.h===0?O:T;ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v))tg[f.f].push(v);});});
   var now=initAll-cull-dead,fpp=now>0?feed/now:null,fcr=(w>0&&now>0)?feed/(now*w):null;
-  var pct=function(x){return initAll>0?(x/initAll*100).toFixed(2)+'%':'–';};
+  var docAll=docOf(c,HOUSES);
+  var pct=function(x){return docAll>0?(x/docAll*100).toFixed(2)+'%':'–';};
   var kc=function(ic,lb,v,sm){return '<div class="kc"><span>'+ic+lb+'</span><b>'+v+'</b>'+(sm?'<small>'+sm+'</small>':'')+'</div>';};
   var row=function(n,h){return '<div class="krow" style="--n:'+n+'">'+h+'</div>';};
   $('kpis').innerHTML=
-    row(1,kc(IC('duck'),'현재 사육 마릿수',fmt(now),'서류 입식 '+fmt(Number(c.total)||0)+'수 대비 '+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')))+
+    row(1,kc(IC('duck'),'현재 사육 마릿수',fmt(now),'서류 입식 '+fmt(Number(c.total)||0)+'수 · 육성율 '+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')))+
     row(3,kc(IC('cull'),'도태',fmtN(cull),pct(cull))+kc(IC('dead'),'폐사',fmtN(dead),pct(dead))+kc(IC('cull')+IC('dead'),'합산',fmtN(cull+dead),pct(cull+dead)))+
     row(2,kc(IC('tractor'),'로터리',WT.rot+'<small> 회</small>')+kc(IC('husk'),'왕겨',WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small>'))+
     row(FT.length+(A.ft.none?1:0),FT.map(function(f){return kc(IC('feed'),f.label,fmtN(A.ft[f.k]),'kg');}).join('')+(A.ft.none?kc(IC('feed'),'미지정',fmtN(A.ft.none),'kg'):''))+
@@ -1159,20 +1167,19 @@ function renderAvg(){
       }
     }
   }
-  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('dead')+'폐사율</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
-    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+pct2(dead,initAll)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
+  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
+    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,docOf(c,HOUSES))+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
   $('segW').innerHTML=segHTML();
   $('weekTbl').innerHTML=weekHTML(c,A);
-  var hn=$('houseTbl');if(hn&&!$('drNote'))hn.insertAdjacentHTML('afterend','<p class="hint" id="drNote">폐사율 = 폐사 누계 ÷ 입식 마릿수(서비스 2% 포함)</p>');
+  var hn=$('houseTbl');if(hn&&!$('drNote'))hn.insertAdjacentHTML('afterend','<p class="hint" id="drNote">합산율 = 도태+폐사 누계 ÷ 서류 입식 마릿수(서비스 2% 제외)</p>');
 }
 function weekHTML(c,A){
   var hs=selHouses();
   var maxAge=Math.max(1,ageOf(c,todayStr()));
   A.dates.forEach(function(d){var a=ageOf(c,d);if(a>=1)maxAge=Math.max(maxAge,a);});
   var nW=Math.min(7,Math.ceil(maxAge/7));
-  var rows=[],init=0;
-  hs.forEach(function(h){init+=headsOf(c,h);});
-  var gone=0,deadCum=0; /* 앞 주차까지 줄어든 마릿수(도태+폐사)와 폐사 누계 */
+  var rows=[],doc=docOf(c,hs);
+  var deadCum=0,lossCum=0; /* 그 주까지 폐사 누계, 도태+폐사 누계 */
   for(var wk=1;wk<=nW;wk++){
     var lo=(wk-1)*7+1,hi=wk*7,cull=0,dead=0,feed=0,has=false,T={tmax:[],tmin:[],hmax:[],hmin:[]};
     A.dates.forEach(function(d){
@@ -1183,13 +1190,12 @@ function weekHTML(c,A){
         if(dd)ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v)){T[f.f].push(v);has=true;}});
       });
     });
-    var start=init-gone;
-    gone+=cull+dead;deadCum+=dead;
+    deadCum+=dead;lossCum+=cull+dead;
     rows.push('<tr><td>'+wk+'주차<br><small class="hint">'+lo+'~'+hi+'일령</small></td>'+
-      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+pct2(dead,start)+'<br><small class="hint">누계 '+pct2(deadCum,init)+'</small></td><td><b>'+fmtN(cull+dead)+'</b></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
+      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,doc)+'</b><br><small class="hint">누계 '+pct2(lossCum,doc)+'</small></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
   }
-  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('dead')+'폐사율</th><th>'+IC('cull')+'합산</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
-    '<p class="hint">주차 폐사율 = 그 주 폐사 ÷ 그 주 시작 때 마릿수 · 누계 = 그 주까지 폐사 누계 ÷ 입식 마릿수</p>';
+  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
+    '<p class="hint">합산율 = 그 주 도태+폐사 ÷ 서류 입식 마릿수(서비스 2% 제외) · 누계 = 그 주까지 합계 ÷ 서류 입식 마릿수</p>';
 }
 function pct2(n,d){return d>0?(n/d*100).toFixed(2)+'%':'–';}
 
@@ -2000,7 +2006,7 @@ function cycTotals(c,src,hs){
     var q=Number(e.q)||0,o=by[e.d]||(by[e.d]={cull:0,dead:0,feed:0});
     o[e.t]+=q;tot[e.t]+=q;if(!last||e.d>last)last=e.d;
   });
-  return {init:init,by:by,tot:tot,last:last};
+  return {init:init,doc:docOf(c,hs),by:by,tot:tot,last:last};
 }
 /* 마리당 사료(일별): 사료를 입고한 날부터 다음 입고 전날까지, 입고량을 날수로 나눠 그날 마릿수로 나눈다.
    마지막 입고는 출하일까지(출하일 포함) 쓴 것으로 본다. 출하 정보가 없으면 마지막 구간은 그리지 않는다. */
@@ -2030,7 +2036,7 @@ function fppDaily(c,T,si){
   }
   return pts;
 }
-/* 폐사율(일별/누계): 일별 = 그날 폐사 ÷ 전일 마릿수, 누계 = 누적 폐사 ÷ 입식 마릿수. 선택하지 않은 쪽은 괄호(st)로 같이 보여 준다. */
+/* 폐사율(일별/누계): 서류 입식 마릿수 기준. (옛 설명) 일별 = 그날 폐사 ÷ 전일 마릿수, 누계 = 누적 폐사 ÷ 입식 마릿수. 선택하지 않은 쪽은 괄호(st)로 같이 보여 준다. */
 function drPts(c,T,rotD,cum,d0,d1){
   var pts=[],ks=Object.keys(T.by).sort();
   if(!(T.init>0))return pts;
@@ -2041,7 +2047,7 @@ function drPts(c,T,rotD,cum,d0,d1){
     var d=isoDay(n),o=T.by[d]||{cull:0,dead:0},prev=T.init-run.cull-run.dead;
     run.cull+=o.cull;run.dead+=o.dead;
     if(!(prev>0))continue;
-    var dr=o.dead/prev*100,cr=run.dead/T.init*100,a=ageOf(c,d);
+    var base=T.doc>0?T.doc:T.init,dr=o.dead/base*100,cr=run.dead/base*100,a=ageOf(c,d);
     pts.push({x:a+0.5,y:cum?cr:dr,d:d,a:a,lab:'',rot:!!(rotD&&rotD[d]),st:cum?'당일 '+dr.toFixed(3)+'%':'누계 '+cr.toFixed(2)+'%'});
   }
   return pts;
@@ -2203,7 +2209,7 @@ function renderGraph(){
     }).join('')+'</div>';
   }
   var loading=cm&&series.some(function(s){return s.loading;});
-  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리 · 하루하루 누적 사료. 괄호 안은 그날 하루치(입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수). 마지막 입고는 출하일까지, 출하 정보가 없으면 그 뒤는 표시 안 함':g.metric==='drate'?'폐사율(도태 제외) · '+(g.cum?'누계 = 누적 폐사 ÷ 입식 마릿수, 괄호는 당일(그날 폐사 ÷ 전일 마릿수)':'일별 = 그날 폐사 ÷ 전일 마릿수, 괄호는 누계(누적 폐사 ÷ 입식 마릿수)'):m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 최고·최저를 선택하면 하루 2점(최저는 새벽, 최고는 오후 위치) · 예전 아침·점심·저녁 기록은 그중 큰 값을 최고, 작은 값을 최저로 표시':'')+
+  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리 · 하루하루 누적 사료. 괄호 안은 그날 하루치(입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수). 마지막 입고는 출하일까지, 출하 정보가 없으면 그 뒤는 표시 안 함':g.metric==='drate'?'폐사율(도태 제외) · '+(g.cum?'누계 = 누적 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외), 괄호는 당일':'일별 = 그날 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외), 괄호는 누계'):m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 최고·최저를 선택하면 하루 2점(최저는 새벽, 최고는 오후 위치) · 예전 아침·점심·저녁 기록은 그중 큰 값을 최고, 작은 값을 최저로 표시':'')+
     (g.metric==='temp'?' · 입력 탭에서 넣은 온도':g.metric==='humi'?' · 입력 탭에서 넣은 습도':'')+(hasRotMark(g.metric)?' · ○ 표시는 로터리 작업한 날':'')+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>';
   if(cm&&g.metric==='fcr'){
     var miss=g.sel.map(cycleById).filter(function(x){if(!x)return false;var si=shipOf(x.id);return si!==undefined&&!(si&&si.date&&si.W>0);});
