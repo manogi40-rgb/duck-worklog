@@ -21,7 +21,7 @@
   --font-body:"IBM Plex Sans KR",system-ui,-apple-system,"Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   --font-display:"Oxanium","IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
   /* 동별 색(그래프·동 카드 윗줄·바로가기 공통): 1~5동 */
-  --s1:#4C8DFF;--s2:#FF8A4C;--s3:#2FD39A;--s4:#F5CF3F;--s5:#F07FB0;--grid:#22313A;--axis:#3A4C56;
+  --s1:#4C8DFF;--s2:#FF8A4C;--s3:#2FD39A;--s4:#F5CF3F;--s5:#F07FB0;--s6:#A98BFF;--grid:#22313A;--axis:#3A4C56;
   color-scheme:dark;
 }
 *{box-sizing:border-box}
@@ -437,6 +437,59 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .row-label span{font-size:17px;white-space:nowrap}
 .row-label .ico{--is:30px}
 .qin{width:96px}
+/* v16: 사료 배분 제외 · 스마트팜(급수·급이) · 통계 나란히 보기 · 변화 찾기 */
+.fdt .fx{display:inline-flex;align-items:center;gap:6px;font-size:14px;font-weight:600;white-space:nowrap}
+.fdt .fx input{width:24px;height:24px;margin:0}
+.fdt tr.off td:not(:nth-child(2)){opacity:.4}
+.fdt tr.off .fx span{color:var(--muted)}
+.tbl.fdt{min-width:0}
+.fdt tr:not(.off) .fx span{display:none}
+.fdt .fx span{font-size:12px}
+.fdt td:nth-child(2),.fdt th:nth-child(2){width:46px;padding-left:0;padding-right:0}
+.smart{display:flex;flex-wrap:wrap;gap:6px 14px;font-size:15px;padding:8px 12px;border-radius:14px;border:1px solid rgba(79,180,255,.35);background:rgba(79,180,255,.07)}
+.smart[hidden]{display:none}
+.smart b{font-family:var(--font-display);font-size:18px}
+.smart small{color:var(--muted)}
+.gpre{display:flex;flex-wrap:wrap;gap:6px}
+.gpre button{min-height:48px;padding:0 14px;border-radius:14px;border:1px dashed var(--accent);background:rgba(217,179,108,.08);color:var(--ink);font-weight:700;cursor:pointer;display:inline-flex;align-items:center}
+.gpre button[aria-pressed=true]{background:var(--accent);color:var(--accent-ink);border-style:solid}
+.glab{font-size:13px;color:var(--muted);font-weight:700;margin:2px 0 -2px}
+.gptl{font-size:13px;font-weight:700;fill:var(--ink) !important;font-family:var(--font-body) !important}
+.gnone{font-size:13px;fill:var(--muted) !important}
+.gmk{stroke:var(--accent);stroke-width:1.2;stroke-dasharray:3 4;opacity:.75}
+.gday{margin-top:10px;border:1px solid var(--line);border-radius:16px;padding:10px 12px;background:rgba(255,255,255,.03)}
+.gday .gdh{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:6px}
+.gday .gdh b{font-family:var(--font-display);font-size:22px;color:var(--accent)}
+.gday .gdh span{color:var(--muted);font-size:14px}
+.gday .gdh .ev{color:var(--ink);font-weight:700;font-size:15px}
+.gday table{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.gday th,.gday td{padding:6px 4px;text-align:right;border-bottom:1px solid var(--line);white-space:nowrap;font-size:15px}
+.gday th{font-size:12px;color:var(--muted);font-weight:600}
+.gday th:first-child,.gday td:first-child{text-align:left}
+.gday td b{font-family:var(--font-display);font-size:17px;font-weight:600}
+.gday td small{display:block;font-size:13px;font-weight:700}
+.sw6{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.cb{color:var(--bad)}.cg{color:var(--good)}.cw{color:var(--warn)}.cc{color:var(--water)}.c0{color:var(--muted);font-weight:400 !important}
+.evwrap{display:flex;flex-direction:column;gap:12px}
+.evc{border:1px solid var(--line);border-radius:18px;padding:12px;background:rgba(255,255,255,.03)}
+.evh{display:flex;align-items:center;gap:10px}
+.evh .evi{font-size:30px;line-height:1}
+.evh b{font-size:19px}
+.evh small{margin-left:auto;color:var(--muted);font-size:13px;text-align:right}
+.evs{margin:8px 0;font-size:17px;font-weight:700;line-height:1.45}
+.evt{width:100%;border-collapse:collapse;font-variant-numeric:tabular-nums}
+.evt th,.evt td{padding:7px 4px;text-align:center;border-bottom:1px solid var(--line);font-size:16px}
+.evt th{font-size:13px;color:var(--muted);font-weight:600}
+.evt td:first-child,.evt th:first-child{text-align:left;white-space:nowrap}
+.evt td b{font-family:var(--font-display);font-size:19px;font-weight:700}
+.evt th.now{color:var(--accent)}
+.evc details{margin-top:8px}
+.evc summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:40px;display:flex;align-items:center}
+.evnone{color:var(--muted);font-size:14px}
+.gdet{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;background:rgba(255,255,255,.02)}
+.gdet summary{cursor:pointer;min-height:46px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-weight:700;color:var(--ink)}
+.gdet[open] summary{margin-bottom:4px}
+.gdet .seg{margin-bottom:6px}
 </style>
 </head>
 <body>
@@ -535,9 +588,9 @@ function addDays(s,n){return new Date((dayNum(s)+n)*86400000).toISOString().slic
 function dot(s){return s.replace(/-/g,'.');}
 function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
-var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false},
+var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v15';
+var VER='v16';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -909,6 +962,7 @@ function cardHTML(h){
   return '<section class="house" data-h="'+h+'" style="--hc:var(--s'+h+')"><div class="house-head"><div><h3><span class="hn">'+h+'<small>동</small></span></h3></div>'+
     '<div class="house-now"><b data-now>0</b>'+IC('duck',24)+'남은 수 · 입식 <span data-init>0</span></div></div>'+rows+
     '<div class="temps one">'+temps+hums+'</div>'+
+    '<div class="smart" data-smart hidden></div>'+
     '<div class="works"><label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
     '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="hk" aria-label="'+h+'동 왕겨 작업"><span class="ico i-husk" aria-hidden="true"></span>왕겨</label>'+
     '<label class="hkl">kg<input class="kin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="hkg" placeholder="kg" aria-label="'+h+'동 왕겨 kg" disabled></label></div>'+
@@ -922,21 +976,39 @@ function feedTypeFor(h){
 }
 function feedCardHTML(){
   var rows=HOUSES.map(function(h){
-    return '<tr><td><b style="color:var(--s'+h+')">'+h+'동</b></td><td data-fn="'+h+'">0</td>'+
+    return '<tr data-frow="'+h+'"><td><b style="color:var(--s'+h+')">'+h+'동</b></td>'+
+      '<td><label class="fx"><input type="checkbox" class="fin" data-h="'+h+'" checked aria-label="'+h+'동 사료 배분에 넣기"><span>배분</span></label></td><td data-fn="'+h+'">0</td>'+
       '<td><input class="frem" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 남은 재고 kg"></td></tr>';
   }).join('');
   return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고 계산</h2>'+
     '<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
     '<div id="fdet" hidden><div class="ftrow ftmain" role="radiogroup" aria-label="사료 종류">'+EM('🍽️')+'<b>종류</b>'+FT.map(function(f){
       return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'</div>'+
-    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>배분</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
     '<div class="hint" id="fsum"></div>'+
-    '<div class="hint">배분 결과가 아래 각 동 사료 칸에 표시됩니다. 동마다 고쳐서 맞춘 뒤 그 동의 확인을 누르면 기록됩니다.</div></div>'+
+    '<div class="hint">이번 입고를 받지 않는 동은 \'배분\' 체크를 풀면 남은 동끼리만 나눕니다(이 입식에서 계속 기억). 배분 결과가 아래 각 동 사료 칸에 표시되고, 동마다 고쳐서 맞춘 뒤 그 동의 확인을 누르면 기록됩니다.</div></div>'+
     '</section>';
+}
+/* 사료 배분에서 뺄 동: 입식마다 이 기기에 기억(읽기 없음) */
+function fexGet(){
+  if(S.fexCid!==S.cid){S.fexCid=S.cid;S.fex={};try{(JSON.parse(lsGet('wl-fex-'+S.cid)||'[]')||[]).forEach(function(h){S.fex[h]=true;});}catch(e){}}
+  return S.fex;
+}
+function fexSet(h,off){var f=fexGet();if(off)f[h]=true;else delete f[h];lsSet('wl-fex-'+S.cid,JSON.stringify(Object.keys(f).map(Number)));}
+function fexSync(){
+  var f=fexGet();
+  HOUSES.forEach(function(h){
+    var cb=document.querySelector('.fin[data-h="'+h+'"]'),tr=document.querySelector('[data-frow="'+h+'"]'),ri=document.querySelector('.frem[data-h="'+h+'"]');
+    if(cb&&document.activeElement!==cb)cb.checked=!f[h];
+    if(tr)tr.classList.toggle('off',!!f[h]);
+    if(ri)ri.disabled=!!f[h]||!S.canWrite;
+    var lb=cb&&cb.nextElementSibling;if(lb)lb.textContent=f[h]?'제외':'배분';
+  });
 }
 function feedAlloc(){
   var qty=Number(($('fqIn').value||'').replace(/,/g,''));if(!isFinite(qty)||qty<0)qty=0;
-  var now={},rem={},act=HOUSES.filter(function(h){return (S.nowH&&S.nowH[h])>0;}),al={};
+  var fx=fexGet();
+  var now={},rem={},act=HOUSES.filter(function(h){return (S.nowH&&S.nowH[h])>0&&!fx[h];}),al={};
   HOUSES.forEach(function(h){now[h]=(S.nowH&&S.nowH[h])||0;var r=Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));rem[h]=isFinite(r)&&r>0?r:0;al[h]=0;});
   var guard=0;
   while(act.length&&guard++<10){
@@ -964,10 +1036,11 @@ function feedSumRefresh(){
 function feedRecalc(){
   var fq=$('fqIn');if(!fq)return;
   var has=(Number((fq.value||'').replace(/,/g,''))||0)>0;
-  $('fdet').hidden=!has;document.querySelectorAll('.falrow').forEach(function(r){r.hidden=!has;});if(!has)return;
+  fexSync();var fx=fexGet();
+  $('fdet').hidden=!has;document.querySelectorAll('.falrow').forEach(function(r){var fi=r.querySelector('.fal');r.hidden=!has||!!(fi&&fx[Number(fi.dataset.h)]);});if(!has)return;
   HOUSES.forEach(function(h){var n=document.querySelector('[data-fn="'+h+'"]');if(n)n.textContent=fmt((S.nowH&&S.nowH[h])||0);});
   var al=feedAlloc();
-  HOUSES.forEach(function(h){var i=document.querySelector('.fal[data-h="'+h+'"]');if(i)i.value=al[h]?String(al[h]):'';});
+  HOUSES.forEach(function(h){var i=document.querySelector('.fal[data-h="'+h+'"]');if(i)i.value=(al[h]&&!fx[h])?String(al[h]):'';});
   var sel=S.ftSel&&ftLabel(S.ftSel)?S.ftSel:null;
   document.querySelectorAll('input[name="fts"]').forEach(function(r){r.checked=r.value===sel;});
   feedTags();feedSumRefresh();
@@ -1039,6 +1112,13 @@ function refreshInput(){
     if(ckH)ckH.checked=dd.hk===true;
     if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;var hl2=kg.closest('.hkl');if(hl2)hl2.hidden=!(dd.hk===true);}
     setVal(card.querySelector('textarea'),dd.memo);
+    var sm=card.querySelector('[data-smart]'),sw=smv(dd,'wat'),sf=smv(dd,'fdm');
+    if(sm){
+      var h0=now+day.cull+day.dead;
+      sm.hidden=(sw==null&&sf==null);
+      if(!sm.hidden)sm.innerHTML=(sw!=null?'<span>'+EM('💧')+'급수 <b>'+watTxt(sw)+'</b> L'+(h0>0?' <small>· 마리당 '+wppTxt(sw*1000/h0)+' mL</small>':'')+'</span>':'')+
+        (sf!=null?'<span>'+EM('⏱️')+'급이 <b>'+fmtMin(sf)+'</b></span>':'');
+    }
     var list=[];
     S.entries.forEach(function(e,id){if(e.d===S.date&&e.h===h)list.push({id:id,e:e});});
     list.sort(function(a,b){return (a.e.at||0)-(b.e.at||0);});
@@ -1055,7 +1135,7 @@ function refreshInput(){
     '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+
     '<span>사료 누계 '+FT.map(function(f){return f.label+' <b>'+fmtN(CUMT[f.k])+'</b>';}).join(' · ')+(CUMT.none?' · 미지정 <b>'+fmtN(CUMT.none)+'</b>':'')+' · 총 <b>'+fmtN(CUMT.crumble+CUMT.early+CUMT.late+CUMT.none)+'</b> kg</span>'+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
-  renderEnv();
+  fexSync();renderEnv();
 }
 
 /* 기록 탭 */
@@ -1069,7 +1149,8 @@ function selHouses(){return S.filter==='all'?HOUSES:[Number(S.filter)];}
 function renderLog(){
   var c=cyc(),A=agg(),hs=selHouses(),allV=S.filter==='all';
   var dates=Array.from(A.dates).filter(function(d){return d>=c.stockDate;}).sort().reverse();
-  var tc=0,td=0,tf=0;
+  var tc=0,td=0,tf=0,tw=0,hasW=false;
+  var SB=dayRows(c,cycSrc(c.id),hs);
   var body=dates.map(function(d){
     var cull=0,dead=0,feed=0,T={tmax:[],tmin:[],hmax:[],hmin:[]},memos=[],works=[];
     hs.forEach(function(h){
@@ -1083,15 +1164,72 @@ function renderLog(){
     var a=ageOf(c,d);
     var row='<tr><td><button type="button" class="datebtn" data-d="'+d+'">'+d.slice(5).replace('-','.')+'<small>'+a+'일령</small></button></td>'+
       (allV?'<td>'+wxCell(d)+'</td>':'')+'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td>'+fmtN(feed)+'</td>'+
+      (function(){var r=SB[d]||{};if(r.wat!=null){tw+=r.wat;hasW=true;}
+        return '<td>'+(r.wat!=null?watTxt(r.wat)+'<small>'+(r.wpp!=null?wppTxt(r.wpp)+' mL/마리':'')+'</small>':'–')+'</td>'+
+          '<td>'+(r.fdm!=null?fmtMin(r.fdm)+(r.fdmL.length>1?'<small>동 평균</small>':''):'–')+'</td>';})()+
       '<td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td><td>'+(works.length?esc(works.join(' / ')):'–')+'</td></tr>';
-    if(memos.length)row+='<tr><td colspan="'+(allV?8:7)+'" class="memo-row">'+esc(memos.join('  /  '))+'</td></tr>';
+    if(memos.length)row+='<tr><td colspan="'+(allV?10:9)+'" class="memo-row">'+esc(memos.join('  /  '))+'</td></tr>';
     return row;
   }).join('');
   $('pane-log').innerHTML='<div class="cardhead"><h2 style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">'+IC('calendar')+'날짜별 기록</h2>'+segHTML()+'</div>'+
-    (dates.length?'<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>'+IC('calendar')+'날짜</th>'+(allV?'<th>'+IC('weather')+'날씨</th>':'')+'<th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 최고·최저</th><th>'+IC('humi')+'습도 최고·최저</th><th>'+IC('tractor')+'작업</th></tr></thead><tbody>'+body+
-    '</tbody><tfoot><tr><td>누계</td>'+(allV?'<td></td>':'')+'<td>'+fmtN(tc)+'</td><td>'+fmtN(td)+'</td><td>'+fmtN(tf)+'</td><td></td><td></td><td></td></tr></tfoot></table></div></div>'
+    (dates.length?'<div class="card"><div class="scroll"><table class="tbl"><thead><tr><th>'+IC('calendar')+'날짜</th>'+(allV?'<th>'+IC('weather')+'날씨</th>':'')+'<th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+EM('💧')+'급수(L)<br><small>마리당</small></th><th>'+EM('⏱️')+'급이시간</th><th>'+IC('temp')+'온도 최고·최저</th><th>'+IC('humi')+'습도 최고·최저</th><th>'+IC('tractor')+'작업</th></tr></thead><tbody>'+body+
+    '</tbody><tfoot><tr><td>누계</td>'+(allV?'<td></td>':'')+'<td>'+fmtN(tc)+'</td><td>'+fmtN(td)+'</td><td>'+fmtN(tf)+'</td><td>'+(hasW?watTxt(tw):'')+'</td><td></td><td></td><td></td><td></td></tr></tfoot></table></div>'+
+    (hasW?'':'<p class="hint">급수·급이시간은 스마트팜(라즈베리파이) 자료가 들어오면 자동으로 채워집니다.</p>')+'</div>'
     :'<div class="state"><p>아직 입력한 기록이 없습니다. 입력 탭에서 도태·폐사·사료·온도를 넣으면 날짜별로 모입니다.</p></div>');
 }
+
+/* ---------- 스마트팜 자료(급수·급이): 나중에 라즈베리파이·농장관리앱이 넣어 준다 ----------
+   동별 days 문서(id = 입식ID_날짜_동, h=1~5)에 아래 필드를 함께 넣으면 기록·집계·통계·엑셀에 바로 나온다.
+     wat : 하루 급수량 (L)
+     fdm : 하루 급이시간 (분, 급이기가 돈 시간 합계)
+   이미 실시간으로 받고 있는 days 문서라서 읽기 한도를 따로 쓰지 않는다.
+   읽기를 아끼려면 하루 한 번(또는 며칠치를 한꺼번에) 동마다 문서 1개씩 쓰고, 같은 날 여러 번 고쳐 쓰지 않는다.
+   마리당 급수(mL) = 급수량 ÷ 그날 아침 마릿수(전날까지 도태·폐사를 뺀 수) — 앱이 계산한다. */
+function smv(dd,f){return (dd&&typeof dd[f]==='number'&&isFinite(dd[f])&&dd[f]>=0)?dd[f]:null;}
+function fmtMin(m){if(m==null||!isFinite(m))return '–';m=Math.round(m);var h=Math.floor(m/60),r=m%60;return h?h+'시간'+(r?' '+r+'분':''):r+'분';}
+/* 날짜별 그날 아침 마릿수: res[날짜][동] */
+function headsMap(c,entries){
+  var lossBy={};
+  entries.forEach(function(e){if(!e||!e.d||(e.t!=='dead'&&e.t!=='cull'))return;var o=lossBy[e.d]||(lossBy[e.d]={});o[e.h]=(o[e.h]||0)+(Number(e.q)||0);});
+  var res={},run={};HOUSES.forEach(function(h){run[h]=0;});
+  for(var n=dayNum(c.stockDate),n1=dayNum(maxDateOf(c));n<=n1;n++){
+    var d=isoDay(n),o={};HOUSES.forEach(function(h){o[h]=headsOf(c,h)-run[h];});res[d]=o;
+    var l=lossBy[d];if(l)HOUSES.forEach(function(h){run[h]+=l[h]||0;});
+  }
+  return res;
+}
+/* 하루 단위로 모은 자료(동 여러 개면 합치거나 평균): 통계·변화 찾기·집계가 같이 쓴다 */
+function dayRows(c,src,hs,HM){
+  HM=HM||headsMap(c,src.entries);
+  var by={},get=function(d){return by[d]||(by[d]={dead:0,cull:0,feed:0,wat:null,watH:0,fdmL:[],tx:[],tn:[],rot:0,hk:0});};
+  src.entries.forEach(function(e){
+    if(!e||hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||(e.t!=='dead'&&e.t!=='cull'&&e.t!=='feed'))return;
+    get(e.d)[e.t]+=Number(e.q)||0;
+  });
+  src.days.forEach(function(dd){
+    if(!dd||!dd.d||dd.d<c.stockDate||hs.indexOf(dd.h)<0)return;
+    var r=get(dd.d),w=smv(dd,'wat'),f=smv(dd,'fdm'),hh=HM[dd.d];
+    if(w!=null){r.wat=(r.wat||0)+w;r.watH+=hh?(hh[dd.h]||0):0;}
+    if(f!=null)r.fdmL.push(f);
+    var tx=thv(dd,'tmax'),tn=thv(dd,'tmin');if(isNum(tx))r.tx.push(tx);if(isNum(tn))r.tn.push(tn);
+    if(dd.rot===true)r.rot++;if(dd.hk===true)r.hk++;
+  });
+  Object.keys(by).forEach(function(d){
+    var r=by[d];
+    r.wpp=(r.wat!=null&&r.watH>0)?r.wat*1000/r.watH:null;
+    r.fdm=r.fdmL.length?mean(r.fdmL):null;
+    r.tmax=r.tx.length?mean(r.tx):null;r.tmin=r.tn.length?mean(r.tn):null;
+  });
+  return by;
+}
+/* 여러 날의 하루 평균(자료 있는 날만) */
+function smartAvg(by,dates){
+  var w=[],p=[],f=[],tot=0;
+  (dates||Object.keys(by)).forEach(function(d){var r=by[d];if(!r)return;if(r.wat!=null){w.push(r.wat);tot+=r.wat;}if(r.wpp!=null)p.push(r.wpp);if(r.fdm!=null)f.push(r.fdm);});
+  return {wat:w.length?mean(w):null,wpp:p.length?mean(p):null,fdm:f.length?mean(f):null,tot:w.length?tot:null,n:Math.max(w.length,f.length)};
+}
+function watTxt(v){return v==null?'–':fmt(Math.round(v));}
+function wppTxt(v){return v==null?'–':fmt(Math.round(v));}
 
 /* 작업(로터리·왕겨) 집계 */
 function workTally(hs){
@@ -1128,11 +1266,12 @@ function renderAvg(){
   var initAll=0,cull=0,dead=0,feed=0;
   var T={tmax:[],tmin:[],hmax:[],hmin:[]};
   var WT=workTally(HOUSES);
+  var SRC=cycSrc(c.id),HM=headsMap(c,SRC.entries),SA=smartAvg(dayRows(c,SRC,HOUSES,HM));
   var hrows=HOUSES.map(function(h){
-    var init=headsOf(c,h),t=A.tot[h],now=init-t.cull-t.dead;
+    var init=headsOf(c,h),t=A.tot[h],now=init-t.cull-t.dead,sa=smartAvg(dayRows(c,SRC,[h],HM));
     initAll+=init;cull+=t.cull;dead+=t.dead;feed+=t.feed;
     var fpp=now>0?t.feed/now:null,fcr=(w>0&&now>0)?t.feed/(now*w):null;
-    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td><b>'+pct2(t.cull+t.dead,docOf(c,[h]))+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
+    return '<tr><td>'+h+'동</td><td>'+fmt(now)+'</td><td>'+fmtN(t.cull)+'</td><td>'+fmtN(t.dead)+'</td><td><b>'+fmtN(t.cull+t.dead)+'</b></td><td><b>'+pct2(t.cull+t.dead,docOf(c,[h]))+'</b></td><td>'+fmtN(t.feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+watTxt(sa.wat)+'</td><td>'+wppTxt(sa.wpp)+'</td><td>'+fmtMin(sa.fdm)+'</td><td>'+((WT.by[h]||{rot:0}).rot)+'회</td><td>'+((WT.by[h]||{hk:0}).hk)+'회 · '+fmtN((WT.by[h]||{kg:0}).kg)+'kg</td></tr>';
   }).join('');
   var O={tmax:[],tmin:[],hmax:[],hmin:[]};
   S.days.forEach(function(dd){var tg=dd.h===0?O:T;ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v))tg[f.f].push(v);});});
@@ -1144,6 +1283,9 @@ function renderAvg(){
   $('kpis').innerHTML=
     row(1,kc(IC('duck'),'현재 사육 마릿수',fmt(now),'서류 입식 '+fmt(Number(c.total)||0)+'수 · 육성율 '+((Number(c.total)||0)>0?(now/Number(c.total)*100).toFixed(2)+'%':'–')))+
     row(3,kc(IC('cull'),'도태',fmtN(cull),pct(cull))+kc(IC('dead'),'폐사',fmtN(dead),pct(dead))+kc(IC('cull')+IC('dead'),'합산',fmtN(cull+dead),pct(cull+dead)))+
+    row(3,kc(EM('💧'),'급수 하루 평균',SA.wat==null?'–':watTxt(SA.wat)+'<small> L</small>',SA.wat==null?'스마트팜 연결 후':'누계 '+watTxt(SA.tot)+' L')+
+      kc(EM('💧'),'마리당 급수',SA.wpp==null?'–':wppTxt(SA.wpp)+'<small> mL</small>','하루 평균')+
+      kc(EM('⏱️'),'급이시간',SA.fdm==null?'–':fmtMin(SA.fdm),SA.fdm==null?'스마트팜 연결 후':'하루 평균 · 동 평균'))+
     row(2,kc(IC('tractor'),'로터리',WT.rot+'<small> 회</small>')+kc(IC('husk'),'왕겨',WT.hk+'<small> 회 · </small>'+fmtN(WT.kg)+'<small> kg</small>'))+
     row(FT.length+(A.ft.none?1:0),FT.map(function(f){return kc(IC('feed'),f.label,fmtN(A.ft[f.k]),'kg');}).join('')+(A.ft.none?kc(IC('feed'),'미지정',fmtN(A.ft.none),'kg'):''))+
     row(3,kc(IC('feed'),'총합산',fmtN(feed),'kg')+kc(IC('cart'),'마리당',fpp==null?'–':fpp.toFixed(2),'kg')+kc(IC('stats'),'요구율',fcr==null?'–':fcr.toFixed(2),w>0?'':'중량 입력'));
@@ -1167,8 +1309,8 @@ function renderAvg(){
       }
     }
   }
-  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
-    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,docOf(c,HOUSES))+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
+  $('houseTbl').innerHTML='<table class="tbl"><thead><tr><th>'+IC('barn')+'동</th><th>'+IC('duck')+'현재 수</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료(kg)</th><th>'+IC('cart')+'마리당(kg)</th><th>'+IC('stats')+'요구율</th><th>'+EM('💧')+'급수<br><small>하루 평균 L</small></th><th>'+EM('💧')+'마리당<br><small>하루 mL</small></th><th>'+EM('⏱️')+'급이시간<br><small>하루 평균</small></th><th>'+IC('tractor')+'로터리</th><th>'+IC('husk')+'왕겨</th></tr></thead><tbody>'+hrows+
+    '</tbody><tfoot><tr><td>전체</td><td>'+fmt(now)+'</td><td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,docOf(c,HOUSES))+'</b></td><td>'+fmtN(feed)+'</td><td>'+(fpp==null?'–':fpp.toFixed(2))+'</td><td>'+(fcr==null?'–':fcr.toFixed(2))+'</td><td>'+watTxt(SA.wat)+'</td><td>'+wppTxt(SA.wpp)+'</td><td>'+fmtMin(SA.fdm)+'</td><td>'+WT.rot+'회</td><td>'+WT.hk+'회 · '+fmtN(WT.kg)+'kg</td></tr></tfoot></table>';
   $('segW').innerHTML=segHTML();
   $('weekTbl').innerHTML=weekHTML(c,A);
   var hn=$('houseTbl');if(hn&&!$('drNote'))hn.insertAdjacentHTML('afterend','<p class="hint" id="drNote">합산율 = 도태+폐사 누계 ÷ 서류 입식 마릿수(서비스 2% 제외)</p>');
@@ -1178,7 +1320,7 @@ function weekHTML(c,A){
   var maxAge=Math.max(1,ageOf(c,todayStr()));
   A.dates.forEach(function(d){var a=ageOf(c,d);if(a>=1)maxAge=Math.max(maxAge,a);});
   var nW=Math.min(7,Math.ceil(maxAge/7));
-  var rows=[],doc=docOf(c,hs);
+  var rows=[],doc=docOf(c,hs),WB=dayRows(c,cycSrc(c.id),hs);
   var deadCum=0,lossCum=0; /* 그 주까지 폐사 누계, 도태+폐사 누계 */
   for(var wk=1;wk<=nW;wk++){
     var lo=(wk-1)*7+1,hi=wk*7,cull=0,dead=0,feed=0,has=false,T={tmax:[],tmin:[],hmax:[],hmin:[]};
@@ -1191,10 +1333,12 @@ function weekHTML(c,A){
       });
     });
     deadCum+=dead;lossCum+=cull+dead;
+    var wds=[];for(var an=lo;an<=hi;an++)wds.push(addDays(c.stockDate,an-1));
+    var wa=smartAvg(WB,wds);if(wa.n)has=true;
     rows.push('<tr><td>'+wk+'주차<br><small class="hint">'+lo+'~'+hi+'일령</small></td>'+
-      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,doc)+'</b><br><small class="hint">누계 '+pct2(lossCum,doc)+'</small></td><td>'+fmtN(feed)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
+      (has?'<td>'+fmtN(cull)+'</td><td>'+fmtN(dead)+'</td><td><b>'+fmtN(cull+dead)+'</b></td><td><b>'+pct2(cull+dead,doc)+'</b><br><small class="hint">누계 '+pct2(lossCum,doc)+'</small></td><td>'+fmtN(feed)+'</td><td>'+watTxt(wa.wat)+'<small class="hint">'+(wa.wpp!=null?wppTxt(wa.wpp)+' mL/마리':'')+'</small></td><td>'+fmtMin(wa.fdm)+'</td><td>'+fmtT(mean(T.tmax))+' · '+fmtT(mean(T.tmin))+'</td><td>'+fmtT(mean(T.hmax))+' · '+fmtT(mean(T.hmin))+'</td>':'<td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td><td>–</td>')+'</tr>');
   }
-  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
+  return '<table class="tbl"><thead><tr><th>'+IC('calendar')+'주차</th><th>'+IC('cull')+'도태</th><th>'+IC('dead')+'폐사</th><th>'+IC('cull')+'합산</th><th>'+IC('cull')+IC('dead')+'합산율</th><th>'+IC('feed')+'사료 입고(kg)</th><th>'+EM('💧')+'급수 하루 평균(L)<br><small>마리당</small></th><th>'+EM('⏱️')+'급이시간<br><small>하루 평균</small></th><th>'+IC('temp')+'온도 평균 최고·최저</th><th>'+IC('humi')+'습도 평균 최고·최저</th></tr></thead><tbody>'+rows.join('')+'</tbody></table>'+
     '<p class="hint">합산율 = 그 주 도태+폐사 ÷ 서류 입식 마릿수(서비스 2% 제외) · 누계 = 그 주까지 합계 ÷ 서류 입식 마릿수</p>';
 }
 function pct2(n,d){return d>0?(n/d*100).toFixed(2)+'%':'–';}
@@ -1905,20 +2049,51 @@ function p2(n){n=String(n);return n.length<2?'0'+n:n;}
 var SER_ORDER=[1,2,3,4,5,0];
 var MET={temp:{k:'temp',label:'온도',unit:'℃'},humi:{k:'humi',label:'습도',unit:'%'},dead:{k:'dead',label:'폐사',unit:'마리'},cull:{k:'cull',label:'도태',unit:'마리'},
   loss:{k:'loss',label:'폐사+도태',unit:'마리'},
-  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율(출하)',unit:''}};
-var MET_H=['temp','humi','dead','cull','loss','feed','fpp','drate'],MET_C=['temp','humi','dead','cull','loss','feed','fpp','drate','fcr'];
+  feed:{k:'feed',label:'사료 입고',unit:'kg'},fpp:{k:'fpp',label:'마리당 사료',unit:'kg/마리'},drate:{k:'drate',label:'폐사율',unit:'%'},fcr:{k:'fcr',label:'요구율(출하)',unit:''},
+  fdm:{k:'fdm',label:'급이시간',unit:'분'},water:{k:'water',label:'급수량',unit:'L'},wpp:{k:'wpp',label:'마리당 급수',unit:'mL'}};
+var MET_H=['drate','loss','dead','cull','fdm','wpp','water','temp','humi','feed','fpp'],MET_C=MET_H.concat(['fcr']);
+var SMART=['fdm','water','wpp'];
+var CNT=['dead','cull','loss','feed','drate','water']; /* 일별·누계를 고를 수 있는 항목 */
+var MICON={temp:'🌡️',humi:'💦',dead:'☠️',cull:'✂️',loss:'➕',feed:'🌾',fpp:'🍽️',drate:'📉',fcr:'⚖️',fdm:'⏱️',water:'💧',wpp:'🚰'};
+var MAXP=4,MAXC=6; /* 한 번에 나란히 볼 항목 수, 비교할 입식(파트) 수(농가 1년 최대 6파트) */
+/* 바로 보기: 농장에서 자주 확인하는 조합 */
+var PRESETS=[
+  {k:'rot',em:'🚜',label:'로터리 영향',mets:['fdm','wpp','loss'],mark:'rot'},
+  {k:'env',em:'🌡️',label:'추위·더위 영향',mets:['temp','fdm','wpp'],mark:'rot'},
+  {k:'sick',em:'🩺',label:'질병 신호',mets:['drate','fdm','wpp'],mark:'rot'},
+  {k:'base',em:'📉',label:'폐사·온도',mets:['drate','temp'],mark:'rot'}
+];
 function lossOf(o){return (o?(Number(o.dead)||0)+(Number(o.cull)||0):0);}
 var GH=null;
-var ROT_M=['dead','cull','loss','drate'];
-function hasRotMark(m){return ROT_M.indexOf(m)>=0;}
+function hasRotMark(m){return !isEnv(m)&&m!=='fcr'&&(S.g.mark||'rot')!=='none';}
+/* 표시할 작업(로터리·왕겨)이 있었던 날 */
+function markDays(src,hs,kind){
+  var o={};if(!src||kind==='none')return o;
+  src.days.forEach(function(dd){if(dd&&dd.d&&hs.indexOf(dd.h)>=0&&dd[kind||'rot']===true)o[dd.d]=1;});
+  return o;
+}
+function smartPts(c,by,g){
+  var pts=[],run=0;
+  Object.keys(by).sort().forEach(function(d){
+    var r=by[d],v=g.metric==='water'?r.wat:g.metric==='wpp'?r.wpp:r.fdm;if(v==null)return;
+    var a=ageOf(c,d);if(a<1)return;run+=v;
+    pts.push({x:a+0.5,y:(g.metric==='water'&&g.cum)?run:v,d:d,a:a,lab:''});
+  });
+  return pts;
+}
 function gColor(h){return h===0?'var(--muted)':'var(--s'+h+')';}
 function gSwatch(h){return h===0?'repeating-linear-gradient(90deg,var(--muted) 0 5px,transparent 5px 8px)':'var(--s'+h+')';}
 function winHours(){return {tmax:14,tmin:5};}
 function isoDay(n){return new Date(n*86400000).toISOString().slice(0,10);}
 
 /* 동·외부 겹쳐보기: 현재 선택한 입식 */
-function houseSeries(c){
-  var g=S.g,hours=winHours(),series=[];
+function houseSeries(c,g){
+  g=g||S.g;var hours=winHours(),series=[],src0=cycSrc(c.id);
+  if(SMART.indexOf(g.metric)>=0){
+    var HM=headsMap(c,src0.entries);
+    [1,2,3,4,5].forEach(function(h){series.push({key:String(h),name:hl(h),color:gColor(h),dash:false,sw:gSwatch(h),src:src0,hs:[h],c:c,pts:smartPts(c,dayRows(c,src0,[h],HM),g)});});
+    return series;
+  }
   if(isEnv(g.metric)){
     SER_ORDER.forEach(function(h){
       var pts=[];
@@ -1931,7 +2106,7 @@ function houseSeries(c){
         });
       });
       pts.sort(function(p,q){return p.x-q.x;});
-      series.push({key:String(h),name:hl(h),color:gColor(h),dash:h===0,sw:gSwatch(h),pts:pts});
+      series.push({key:String(h),name:hl(h),color:gColor(h),dash:h===0,sw:gSwatch(h),src:src0,hs:[h],c:c,pts:pts});
     });
   }else{
     var A=agg(),dates=Array.from(A.dates).filter(function(d){return d>=c.stockDate;}).sort(),rotBy={};
@@ -1948,7 +2123,7 @@ function houseSeries(c){
           pts.push({x:ageOf(c,d)+0.5,y:g.cum?run:v,d:d,a:ageOf(c,d),lab:'',rot:!!(rotBy[h]&&rotBy[h][d])});
         }
       }
-      series.push({key:String(h),name:hl(h),color:gColor(h),dash:false,sw:gSwatch(h),pts:pts});
+      series.push({key:String(h),name:hl(h),color:gColor(h),dash:false,sw:gSwatch(h),src:src0,hs:[h],c:c,pts:pts});
     });
   }
   return series;
@@ -1977,10 +2152,10 @@ function cmpStore(cid){
   var src=S.g.cache[cid],si=shipOf(cid);
   if(!src||src.err||src.ls||!(si&&si.date&&si.W>0))return;
   try{
-    var m={},KEEP=['tmax','tmin','hmax','hmin','tm','tn','te','hm','hn','he'];
+    var m={},KEEP=['tmax','tmin','hmax','hmin','tm','tn','te','hm','hn','he','wat','fdm'];
     src.entries.forEach(function(e){if(!e||!e.d||e.h==null||!e.t)return;var k=e.d+'|'+e.h+'|'+e.t;m[k]=(m[k]||0)+(Number(e.q)||0);});
     var ds=src.days.map(function(d){
-      if(!d||!d.d||d.h==null)return null;var o={d:d.d,h:d.h};if(d.rot===true)o.rot=true;
+      if(!d||!d.d||d.h==null)return null;var o={d:d.d,h:d.h};if(d.rot===true)o.rot=true;if(d.hk===true)o.hk=true;
       KEEP.forEach(function(f){if(isNum(d[f]))o[f]=d[f];});return o;
     }).filter(Boolean);
     lsSet('wl-g-'+cid,JSON.stringify({v:1,e:Object.keys(m).map(function(k){var p=k.split('|');return [p[0],Number(p[1]),p[2],Math.round(m[k]*10)/10];}),d:ds,ship:si}));
@@ -2054,6 +2229,7 @@ function drPts(c,T,rotD,cum,d0,d1){
 }
 function cycleSeriesPts(c,src,hs,g,hours){
   var pts=[];
+  if(SMART.indexOf(g.metric)>=0)return smartPts(c,dayRows(c,src,hs),g);
   if(isEnv(g.metric)){
     var by={},FS=fieldsFor(g.metric);
     src.days.forEach(function(dd){
@@ -2092,12 +2268,12 @@ function cycleSeriesPts(c,src,hs,g,hours){
   }
   return pts;
 }
-function cycleSeries(){
-  var g=S.g,hs=scopeHs(),hours=winHours(),out=[];
+function cycleSeries(g){
+  g=g||S.g;var hs=scopeHs(),hours=winHours(),out=[];
   g.sel.forEach(function(cid){
     var c=cycleById(cid),src=cycSrc(cid);if(!c)return;
     var col='var(--s'+g.color[cid]+')';
-    out.push({key:cid,name:cycLabel(c),color:col,dash:false,sw:col,loading:!src||((g.metric==='fpp'||g.metric==='fcr')&&shipOf(cid)===undefined),pts:src?cycleSeriesPts(c,src,hs,g,hours):[]});
+    out.push({key:cid,name:cycLabel(c),color:col,dash:false,sw:col,src:src,hs:hs,c:c,loading:!src||((g.metric==='fpp'||g.metric==='fcr')&&shipOf(cid)===undefined),pts:src?cycleSeriesPts(c,src,hs,g,hours):[]});
   });
   return out;
 }
@@ -2139,7 +2315,7 @@ function cmpPrepare(){
 }
 function cmpAdd(cid){
   var g=S.g,used={};Object.keys(g.color).forEach(function(k){used[g.color[k]]=1;});
-  for(var sl=1;sl<=5;sl++){if(!used[sl]){g.color[cid]=sl;g.sel.push(cid);return true;}}
+  for(var sl=1;sl<=MAXC;sl++){if(!used[sl]){g.color[cid]=sl;g.sel.push(cid);return true;}}
   return false;
 }
 function cycSummaryHTML(){
@@ -2148,7 +2324,7 @@ function cycSummaryHTML(){
     var c=cycleById(cid),src=cycSrc(cid);if(!c||!src)return null;
     var T=cycTotals(c,src,hs),now=T.init-T.tot.cull-T.tot.dead,si=shipOf(cid),w=(si&&si.W)||0;
     var fk=null;if(si&&si.date){fk=0;Object.keys(T.by).forEach(function(d){if(d<=si.date)fk+=T.by[d].feed;});}
-    return {c:c,T:T,now:now,w:w,si:si,fk:fk,cid:cid};
+    return {c:c,T:T,now:now,w:w,si:si,fk:fk,cid:cid,sa:smartAvg(dayRows(c,src,hs))};
   }).filter(Boolean);
   if(!cols.length)return '';
   var rows=[
@@ -2163,7 +2339,9 @@ function cycSummaryHTML(){
     ['마리당 사료 누계 (kg)',function(x){return x.now>0?(x.T.tot.feed/x.now).toFixed(2):'–';}],
     ['출하일령',function(x){return (x.si&&x.si.date)?ageOf(x.c,x.si.date)+'일령':'–';}],
     ['출하 중량 (kg)',function(x){return x.w>0?fmtN(x.w):'–';}],
-    ['사료요구율 (출하 기준)',function(x){return (x.w>0&&x.fk>0)?(x.fk/x.w).toFixed(2):'–';}]
+    ['사료요구율 (출하 기준)',function(x){return (x.w>0&&x.fk>0)?(x.fk/x.w).toFixed(2):'–';}],
+    ['마리당 급수 하루 평균 (mL)',function(x){return wppTxt(x.sa.wpp);}],
+    ['급이시간 하루 평균',function(x){return fmtMin(x.sa.fdm);}]
   ];
   return '<h2 style="margin:6px 0 0;font-family:var(--font-display);font-weight:400;font-size:20px">입식별 요약 · '+(g.scope==='all'?'전체 동':g.scope+'동')+'</h2>'+
     '<div class="scroll"><table class="tbl sum"><thead><tr><th>항목</th>'+cols.map(function(x){return '<th><i class="sw" style="background:var(--s'+g.color[x.cid]+');display:block;margin:0 0 4px auto"></i>'+cycLabel(x.c)+'</th>';}).join('')+'</tr></thead><tbody>'+
@@ -2180,90 +2358,180 @@ function niceTicks(lo,hi,n){
   return {ticks:out,dec:dec};
 }
 function gSub(p){return (p&&p.st!=null)?' ('+p.st+')':(p&&p.s!=null)?' ('+p.s.toFixed(3)+')':'';}
-function gVal(m,v){return (m.k==='temp'||m.k==='humi')?v.toFixed(1):m.k==='drate'?v.toFixed(S.g.cum?2:3)+'%':(m.k==='fpp'||m.k==='fcr')?v.toFixed(2):fmtN(v);}
+function gVal(m,v){
+  if(m.k==='temp'||m.k==='humi')return v.toFixed(1);
+  if(m.k==='drate')return v.toFixed(S.g.cum?2:3)+'%';
+  if(m.k==='fpp'||m.k==='fcr')return v.toFixed(2);
+  if(m.k==='fdm')return fmtMin(v);
+  if(m.k==='wpp'||m.k==='water')return fmt(Math.round(v));
+  return fmtN(v);
+}
+/* ---- 평소(앞 3일 평균)와 비교한 변화: 급이·급수는 %, 폐사·도태는 마릿수, 온도는 ℃, 폐사율은 몇 배 ---- */
+var DKIND={fdm:'pct',water:'pct',wpp:'pct',dead:'abs',cull:'abs',loss:'abs',temp:'deg',tmin:'deg',humi:'abs',drate:'x'};
+function chgCls(k,d,sig){
+  if(!sig)return 'c0';
+  if(k==='dead'||k==='cull'||k==='loss'||k==='drate')return d>0?'cb':'cg';
+  if(k==='temp'||k==='tmin')return d>0?'cw':'cc';
+  return d>0?'cc':'cw';
+}
+function chgOf(k,v,base){
+  var kind=DKIND[k];if(!kind||v==null||base==null)return null;
+  if(kind==='pct'){if(!(base>0))return null;var p=(v-base)/base*100;return {d:p,sig:Math.abs(p)>=5,t:Math.abs(p).toFixed(0)+'%'};}
+  if(kind==='deg'){var t=v-base;return {d:t,sig:Math.abs(t)>=1,t:Math.abs(t).toFixed(1)+'℃'};}
+  if(kind==='x'){
+    if(!(base>0))return v>0?{d:1,sig:true,t:'(평소 0)'}:null;
+    var r=v/base;return {d:r-1,sig:r>=1.5||r<=0.67,t:'평소 ×'+r.toFixed(1)};
+  }
+  var a=v-base;return {d:a,sig:Math.abs(a)>=1,t:fmtN(Math.abs(Math.round(a*10)/10))+(k==='humi'?'%':'수')};
+}
+/* 오리는 매일 커서 급이·급수가 날마다 늘어난다. 그래서 '평소'는 단순 평균이 아니라 앞뒤 흐름으로 예상한 값을 쓴다.
+   lin: [[x,y],...] 로 직선을 맞춰 x0에서의 값을 구한다(점이 3개 미만이면 평균) */
+function linPred(xy,x0){
+  if(xy.length<2)return null;if(xy.length<3)return mean(xy.map(function(p){return p[1];}));
+  var mx=mean(xy.map(function(p){return p[0];})),my=mean(xy.map(function(p){return p[1];})),sxx=0,sxy=0;
+  xy.forEach(function(p){sxx+=(p[0]-mx)*(p[0]-mx);sxy+=(p[0]-mx)*(p[1]-my);});
+  return sxx>0?my+sxy/sxx*(x0-mx):my;
+}
+function chgHTML(k,v,base,tag){
+  var o=chgOf(k,v,base);if(!o)return '';
+  var arrow=DKIND[k]==='x'?(o.d>0?'▲':'▼')+' '+o.t:(o.d>0?'▲':'▼')+o.t;
+  return '<'+(tag||'small')+' class="'+chgCls(k,o.d,o.sig)+'">'+(o.sig?arrow:'≈ 평소')+'</'+(tag||'small')+'>';
+}
+function metNote(k,g){
+  switch(k){
+    case 'fcr':return '요구율 = 출하 사료 ÷ 출하 중량(정산 탭에 출하일·중량을 넣은 입식만)';
+    case 'fpp':return '마리당 사료(kg) = 하루하루 누적, 괄호는 그날 하루치(입고량을 다음 입고 전날까지 나눔)';
+    case 'drate':return '폐사율 = 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외)'+(g.cum?' 누계':' 일별');
+    case 'fdm':return '급이시간 = 급이기가 돈 시간(여러 동이면 동 평균)';
+    case 'wpp':return '마리당 급수(mL) = 하루 급수량 ÷ 그날 아침 마릿수';
+    case 'water':return '급수량(L)'+(g.cum?' 누계':' 하루');
+    case 'temp':return '온도 = 입력 탭의 최고·최저';
+    case 'humi':return '습도 = 입력 탭의 최고·최저';
+    default:return MET[k].label+(MET[k].unit?'('+MET[k].unit+')':'')+(CNT.indexOf(k)>=0?(g.cum?' 누계':' 하루'):'');
+  }
+}
+function gTableHTML(pn,cm,g){
+  var m=pn.m,vis=pn.vis,rowsMap={};
+  vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);(rowsMap[k]=rowsMap[k]||{x:p.x,d:p.d,a:p.a,lab:p.lab,v:{},sv:{},mk:{}}).v[s.key]=p.y;rowsMap[k].sv[s.key]=p;if(s.mk&&s.mk[p.d])rowsMap[k].mk[s.key]=1;});});
+  var rows=Object.keys(rowsMap).map(function(k){return rowsMap[k];}).sort(function(a,b){return b.x-a.x;});
+  var mn=g.mark==='hk'?'왕겨':'로터리';
+  return '<div class="glab" style="margin-top:8px">'+EM(MICON[pn.k])+m.label+(m.unit?' ('+m.unit+')':'')+'</div>'+
+    (rows.length?'<div class="scroll"><table class="tbl"><thead><tr><th>'+(cm?'일령':'날짜')+'</th>'+vis.map(function(s){return '<th>'+s.name+'</th>';}).join('')+'</tr></thead><tbody>'+
+    rows.map(function(r){
+      var first=cm?r.a+'일령'+(r.lab?' '+r.lab:''):r.d.slice(5).replace('-','.')+(r.lab?' '+r.lab:'')+'<small>'+r.a+'일령</small>';
+      return '<tr><td>'+first+'</td>'+vis.map(function(s){return '<td>'+(r.v[s.key]==null?'–':gVal(m,r.v[s.key])+gSub(r.sv[s.key])+(r.mk[s.key]?'<small>'+mn+' 작업</small>':''))+'</td>';}).join('')+'</tr>';
+    }).join('')+'</tbody></table></div>':'<p class="hint">'+(SMART.indexOf(pn.k)>=0?'스마트팜 자료가 들어오면 나타납니다.':'기록이 없습니다.')+'</p>');
+}
 function renderGraph(){
   var pane=$('pane-graph'),c=cyc(),g=S.g;
   if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);GH=null;return;}
-  var cm=g.mode==='cycle';
-  if(!cm&&MET_H.indexOf(g.metric)<0)g.metric='temp';
-  if(cm){cmpPrepare();ensureCmp();}else if(g.metric==='fpp')ensureShip(c.id);
-  var m=MET[g.metric];
-  var series=cm?cycleSeries():houseSeries(c);
-  var vis=cm?series:series.filter(function(s){return !g.off[s.key];});
+  var cm=g.mode==='cycle',ML=cm?MET_C:MET_H;
+  if(!Array.isArray(g.mets))g.mets=['drate','temp'];
+  g.mets=g.mets.filter(function(k){return ML.indexOf(k)>=0;});
+  if(!g.mets.length)g.mets=['drate'];
+  if(cm){cmpPrepare();ensureCmp();}else if(g.mets.indexOf('fpp')>=0)ensureShip(c.id);
+  var mark=g.mark||'rot',mname=mark==='hk'?'왕겨':'로터리';
+  var panels=g.mets.map(function(k){
+    var gg=Object.assign({},g,{metric:k}),ser=cm?cycleSeries(gg):houseSeries(c,gg);
+    ser.forEach(function(s){s.mk=hasRotMark(k)?markDays(s.src,s.hs||[],mark):{};});
+    return {k:k,m:MET[k],ser:ser,vis:cm?ser:ser.filter(function(s){return !g.off[s.key];})};
+  });
+  var anyEnv=g.mets.some(isEnv),anyCnt=g.mets.some(function(k){return CNT.indexOf(k)>=0;});
   var seg=function(attr,items,sel){return '<div class="seg" role="group">'+items.map(function(it){return '<button type="button" '+attr+'="'+it[0]+'" aria-pressed="'+(sel===it[0])+'">'+it[1]+'</button>';}).join('')+'</div>';};
-  var counts=(g.metric==='dead'||g.metric==='cull'||g.metric==='loss'||g.metric==='feed'||g.metric==='drate');
-  var ctl='<div class="gctl">'+seg('data-gmode',[['house',IC('barn')+'동·외부 비교'],['cycle',IC('calendar')+'입식(파트) 비교']],g.mode)+
-    seg('data-gm',(cm?MET_C:MET_H).map(function(k){return [k,({temp:IC('temp'),humi:IC('humi'),dead:IC('dead'),cull:IC('cull'),loss:IC('cull')+IC('dead'),feed:IC('feed'),fpp:IC('cart'),drate:IC('dead'),fcr:IC('stats')}[k]||'')+MET[k].label];}),g.metric)+
-    (isEnv(g.metric)?seg('data-gw',[['all',EM('🌡️')+'최고·최저'],['tmax',EM('🔺')+'최고'],['tmin',EM('🔻')+'최저']],g.win):counts?seg('data-gc',[['0',EM('📅')+'일별'],['1',EM('➕')+'누계']],g.cum?'1':'0'):'')+
+  var ctl='<div class="gctl">'+seg('data-gmode',[['house',IC('barn')+'동끼리 비교'],['cycle',IC('calendar')+'파트끼리 비교']],g.mode)+
+    '<div class="glab">바로 보기</div><div class="gpre" role="group" aria-label="바로 보기">'+PRESETS.map(function(p){
+      return '<button type="button" data-gp="'+p.k+'" aria-pressed="'+(g.preset===p.k)+'">'+EM(p.em)+p.label+'</button>';}).join('')+'</div>'+
+    '<details class="gdet"'+(g.detOpen?' open':'')+'><summary data-gdet="1">'+EM('🧩')+'항목 직접 고르기 <span class="hint">· 지금 '+g.mets.map(function(k){return MET[k].label;}).join(', ')+'</span></summary>'+
+    '<div class="glab">볼 항목 · 여러 개 누르면 위아래로 나란히 (최대 '+MAXP+'개)</div>'+
+    '<div class="seg" role="group" aria-label="볼 항목">'+ML.map(function(k){return '<button type="button" data-gm="'+k+'" aria-pressed="'+(g.mets.indexOf(k)>=0)+'">'+EM(MICON[k])+MET[k].label+'</button>';}).join('')+'</div>'+
+    '<div class="glab">그래프에 ○로 표시할 작업</div>'+seg('data-gk',[['rot',IC('tractor')+'로터리'],['hk',IC('husk')+'왕겨'],['none','표시 안 함']],mark)+'</details>'+
+    (anyEnv?seg('data-gw',[['all',EM('🌡️')+'최고·최저'],['tmax',EM('🔺')+'최고'],['tmin',EM('🔻')+'최저']],g.win):'')+
+    (anyCnt?seg('data-gc',[['0',EM('📅')+'하루씩'],['1',EM('➕')+'누계']],g.cum?'1':'0'):'')+
     (cm?seg('data-gsc',[['all','전체 동']].concat(HOUSES.map(function(h){return [String(h),h+'동'];})),g.scope):'')+
     seg('data-gv',[['0',EM('📈')+'그래프'],['1',EM('📋')+'표']],g.table?'1':'0')+'</div>';
   var legend;
   if(cm){
-    legend='<p class="hint" style="margin:0">비교할 입식을 2~5개 선택하세요. 지금 '+g.sel.length+'개 선택됨.</p><div class="legend" role="group" aria-label="비교할 입식">'+S.cycles.map(function(x){
+    legend='<p class="hint" style="margin:0">비교할 입식(파트)을 2~'+MAXC+'개 고르세요. 지금 '+g.sel.length+'개.</p><div class="legend" role="group" aria-label="비교할 입식">'+S.cycles.map(function(x){
       var on=g.sel.indexOf(x.id)>=0;
       return '<button type="button" class="lg" data-gcy="'+esc(x.id)+'" aria-pressed="'+on+'"><i class="sw" style="background:'+(on?'var(--s'+g.color[x.id]+')':'var(--line)')+'"></i>'+cycLabel(x)+'</button>';
     }).join('')+'<button type="button" class="lg" data-grf="1" style="opacity:1">새로고침</button></div>';
   }else{
-    legend='<div class="legend" role="group" aria-label="표시할 동">'+series.map(function(s){
-      return '<button type="button" class="lg" data-gs="'+s.key+'" aria-pressed="'+(!g.off[s.key])+'"><i class="sw" style="background:'+s.sw+'"></i>'+s.name+'</button>';
+    var hks=[1,2,3,4,5].concat(anyEnv?[0]:[]);
+    legend='<div class="legend" role="group" aria-label="표시할 동">'+hks.map(function(h){
+      return '<button type="button" class="lg" data-gs="'+h+'" aria-pressed="'+(!g.off[String(h)])+'"><i class="sw" style="background:'+gSwatch(h)+'"></i>'+hl(h)+'</button>';
     }).join('')+'</div>';
   }
-  var loading=cm&&series.some(function(s){return s.loading;});
-  var cap='<p class="hint">'+(g.metric==='fcr'?'출하 사료 ÷ 출하 중량 (정산 탭에 출하일과 출하 중량을 넣은 입식만 표시)':g.metric==='fpp'?'단위 kg/마리 · 하루하루 누적 사료. 괄호 안은 그날 하루치(입고일부터 다음 입고 전날까지 입고량을 날수로 나눈 값 ÷ 그날 마릿수). 마지막 입고는 출하일까지, 출하 정보가 없으면 그 뒤는 표시 안 함':g.metric==='drate'?'폐사율(도태 제외) · '+(g.cum?'누계 = 누적 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외), 괄호는 당일':'일별 = 그날 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외), 괄호는 누계'):m.unit?'단위 '+m.unit:'')+' · 가로축은 일령(입식일이 1일령)'+(isEnv(g.metric)&&g.win==='all'?' · 최고·최저를 선택하면 하루 2점(최저는 새벽, 최고는 오후 위치) · 예전 아침·점심·저녁 기록은 그중 큰 값을 최고, 작은 값을 최저로 표시':'')+
-    (g.metric==='temp'?' · 입력 탭에서 넣은 온도':g.metric==='humi'?' · 입력 탭에서 넣은 습도':'')+(hasRotMark(g.metric)?' · ○ 표시는 로터리 작업한 날':'')+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>';
-  if(cm&&g.metric==='fcr'){
+  var loading=cm&&panels.some(function(pn){return pn.ser.some(function(s){return s.loading;});});
+  var cap='<p class="hint">가로축은 일령(입식일이 1일령) · 모든 그래프가 같은 날짜로 줄을 맞춥니다'+(mark!=='none'?' · ○는 '+mname+' 작업한 날':'')+
+    ' · <b>그래프를 누르면 아래에 그날 값과 평소 흐름 대비 변화가 나옵니다</b>'+(loading?' · 다른 입식 기록 불러오는 중…':'')+'</p>'+
+    '<p class="hint" style="margin:0">'+g.mets.map(function(k){return metNote(k,g);}).join(' · ')+'</p>';
+  if(cm&&g.mets.indexOf('fcr')>=0){
     var miss=g.sel.map(cycleById).filter(function(x){if(!x)return false;var si=shipOf(x.id);return si!==undefined&&!(si&&si.date&&si.W>0);});
     if(miss.length)cap+='<p class="err">출하 정보가 없어 요구율을 그릴 수 없는 입식: '+miss.map(cycLabel).join(', ')+' (정산 탭에서 출하일·출하 중량 입력)</p>';
   }
-  var all=[];vis.forEach(function(s){s.pts.forEach(function(p){all.push(p);});});
+  var all=[];panels.forEach(function(pn){pn.vis.forEach(function(s){s.pts.forEach(function(p){all.push(p);});});});
   var body='';GH=null;
   if(cm&&S.cycles.length<2){
     body='<div class="state"><p>입식을 비교하려면 등록된 입식이 2개 이상 필요합니다.</p></div>';
   }else if(!all.length){
-    body='<div class="state"><p>'+(loading?'불러오는 중…':'표시할 기록이 없습니다. '+(g.metric==='temp'?'입력 탭에서 온도를 넣으면 나타납니다.':g.metric==='humi'?'입력 탭에서 습도를 넣으면 나타납니다.':'입력 탭에서 수량을 넣으면 나타납니다.'))+'</p></div>';
+    var onlySmart=g.mets.every(function(k){return SMART.indexOf(k)>=0;});
+    body='<div class="state"><p>'+(loading?'불러오는 중…':onlySmart?'급수·급이 자료는 스마트팜(라즈베리파이)에서 들어오면 나타납니다.':'표시할 기록이 없습니다. 입력 탭에서 기록을 넣으면 나타납니다.')+'</p></div>';
   }else if(g.table){
-    var rowsMap={};
-    vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);(rowsMap[k]=rowsMap[k]||{x:p.x,d:p.d,a:p.a,lab:p.lab,v:{},sv:{}}).v[s.key]=p.y;rowsMap[k].sv[s.key]=p;});});
-    var rows=Object.keys(rowsMap).map(function(k){return rowsMap[k];}).sort(function(a,b){return b.x-a.x;});
-    body='<div class="scroll"><table class="tbl"><thead><tr><th>'+(cm?'일령':'날짜')+'</th>'+vis.map(function(s){return '<th>'+s.name+'</th>';}).join('')+'</tr></thead><tbody>'+
-      rows.map(function(r){
-        var first=cm?r.a+'일령'+(r.lab?' '+r.lab:''):r.d.slice(5).replace('-','.')+(r.lab?' '+r.lab:'')+'<small>'+r.a+'일령</small>';
-        return '<tr><td>'+first+'</td>'+vis.map(function(s){return '<td>'+(r.v[s.key]==null?'–':gVal(m,r.v[s.key])+gSub(r.sv[s.key])+(hasRotMark(g.metric)&&r.sv[s.key]&&r.sv[s.key].rot?'<small>로터리 작업</small>':''))+'</td>';}).join('')+'</tr>';
-      }).join('')+'</tbody></table></div>';
+    body=panels.map(function(pn){return gTableHTML(pn,cm,g);}).join('');
   }else{
-    var W=Math.max(300,Math.min(pane.clientWidth||340,920)),H=300,L=46,R=14,T=14,B=30,pw=W-L-R,ph=H-T-B;
-    var xs=all.map(function(p){return p.x;}),ys=all.map(function(p){return p.y;});
+    var np=panels.length,W=Math.max(300,Math.min(pane.clientWidth||340,920)),L=50,R=14,TT=24,GAP=14,B=28;
+    var PH=np===1?250:np===2?165:np===3?135:118,pw=W-L-R;
+    var tops=panels.map(function(_,i){return 8+i*(TT+PH+GAP)+TT;});
+    var H=tops[np-1]+PH+B,bot=tops[np-1]+PH;
+    var xs=all.map(function(p){return p.x;});
     var xmin=Math.floor(Math.min.apply(null,xs)),xmax=Math.ceil(Math.max.apply(null,xs));if(xmax-xmin<3)xmax=xmin+3;
     /* 확대: 보고 싶은 일령 구간만 그리고, 세로축도 그 구간 값에 맞춘다(새로 읽지 않음) */
-    var zk=S.cid+'|'+g.mode;if(g.zoomKey!==zk){g.zoom=null;g.zoomWk=null;g.zoomKey=zk;}
+    var zk=S.cid+'|'+g.mode;if(g.zoomKey!==zk){g.zoom=null;g.zoomWk=null;g.zoomKey=zk;g.dayA=null;}
     var fx0=xmin,fx1=xmax,zoomed=false;
     if(g.zoom){
       var za=Math.max(fx0,g.zoom[0]),zb=Math.min(fx1,g.zoom[1]);
       if(zb-za>=1&&(za>fx0||zb<fx1)){xmin=za;xmax=zb;zoomed=true;}else{g.zoom=null;g.zoomWk=null;}
     }
-    if(zoomed){
-      var inR=all.filter(function(p){return p.x>=xmin-0.5&&p.x<=xmax+0.5;});
-      if(inR.length)ys=inR.map(function(p){return p.y;});
-    }
-    var lo=isEnv(g.metric)?Math.min.apply(null,ys):0,hi=Math.max.apply(null,ys);
-    if(isEnv(g.metric)){var pad=(hi-lo)*0.1||1;lo-=pad;hi+=pad;}else if(!(hi>0))hi=1;
-    var nt=niceTicks(lo,hi,5),yt=nt.ticks,ymin=yt[0],ymax=yt[yt.length-1];
-    var sx=function(x){return L+(x-xmin)/(xmax-xmin)*pw;},sy=function(y){return T+ph-(y-ymin)/(ymax-ymin)*ph;};
-    var span=xmax-xmin,xstep=span<=10?1:span<=20?2:span<=40?5:7,svg='<defs><clipPath id="gclip"><rect x="'+(L-6)+'" y="'+(T-8)+'" width="'+(pw+12)+'" height="'+(ph+16)+'"/></clipPath></defs>';
-    yt.forEach(function(v){svg+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+sy(v).toFixed(1)+'" y2="'+sy(v).toFixed(1)+'"/><text x="'+(L-6)+'" y="'+(sy(v)+4).toFixed(1)+'" text-anchor="end">'+v.toFixed(nt.dec)+'</text>';});
-    svg+='<line class="ga" x1="'+L+'" x2="'+(W-R)+'" y1="'+(T+ph)+'" y2="'+(T+ph)+'"/>';
-    for(var xv=Math.ceil(xmin/xstep)*xstep;xv<=xmax;xv+=xstep){svg+='<text x="'+sx(xv).toFixed(1)+'" y="'+(H-10)+'" text-anchor="middle">'+xv+'일령</text>';}
-    svg+='<g clip-path="url(#gclip)">';
-    vis.forEach(function(s){
-      if(!s.pts.length)return;
-      var d=s.pts.map(function(p,i){return (i?'L':'M')+sx(p.x).toFixed(1)+' '+sy(p.y).toFixed(1);}).join('');
-      svg+='<path class="ln" d="'+d+'" style="stroke:'+s.color+'"'+(s.dash?' stroke-dasharray="6 4"':'')+'/>';
-      if(hasRotMark(g.metric))s.pts.forEach(function(p){if(p.rot)svg+='<circle class="rotd" cx="'+sx(p.x).toFixed(1)+'" cy="'+sy(p.y).toFixed(1)+'" r="5.5" style="stroke:'+s.color+'"/>';});
-      if(s.pts.length===1)svg+='<circle cx="'+sx(s.pts[0].x).toFixed(1)+'" cy="'+sy(s.pts[0].y).toFixed(1)+'" r="4" style="fill:'+s.color+'"/>';
+    var sx=function(x){return L+(x-xmin)/(xmax-xmin)*pw;};
+    var span=xmax-xmin,xstep=span<=10?1:span<=20?2:span<=40?5:7,svg='',ages={};
+    var xt=[];for(var xv=Math.ceil(xmin/xstep)*xstep;xv<=xmax;xv+=xstep)xt.push(xv);
+    panels.forEach(function(pn,i){
+      var top=tops[i],env=isEnv(pn.k),pts=[];
+      pn.vis.forEach(function(s){s.pts.forEach(function(p){if(p.x>=xmin-0.5&&p.x<=xmax+0.5){pts.push(p);ages[p.a]=1;}});});
+      svg+='<text class="gptl" x="'+L+'" y="'+(top-8)+'">'+MICON[pn.k]+' '+esc(pn.m.label)+(pn.m.unit?' ('+pn.m.unit+')':'')+'</text>';
+      svg+='<defs><clipPath id="gclip'+i+'"><rect x="'+(L-6)+'" y="'+(top-8)+'" width="'+(pw+12)+'" height="'+(PH+16)+'"/></clipPath></defs>';
+      xt.forEach(function(v){svg+='<line class="gl" x1="'+sx(v).toFixed(1)+'" x2="'+sx(v).toFixed(1)+'" y1="'+top+'" y2="'+(top+PH)+'" style="opacity:.5"/>';});
+      if(!pts.length){
+        svg+='<line class="ga" x1="'+L+'" x2="'+(W-R)+'" y1="'+(top+PH)+'" y2="'+(top+PH)+'"/><text class="gnone" x="'+(L+pw/2)+'" y="'+(top+PH/2)+'" text-anchor="middle">'+(SMART.indexOf(pn.k)>=0?'스마트팜 자료가 들어오면 나타납니다':'이 구간에 기록 없음')+'</text>';
+        pn.sy=null;return;
+      }
+      var ys=pts.map(function(p){return p.y;});
+      var free=env||((pn.k==='fdm'||pn.k==='wpp'||pn.k==='water')&&!(pn.k==='water'&&g.cum));
+      var lo=free?Math.min.apply(null,ys):0,hi=Math.max.apply(null,ys);
+      if(free){var pad=(hi-lo)*0.12||Math.max(1,Math.abs(hi)*0.05);lo-=pad;hi+=pad;if(!env&&lo<0)lo=0;}else if(!(hi>0))hi=1;
+      var nt=niceTicks(lo,hi,np>2?3:4),yt=nt.ticks,ymin=yt[0],ymax=yt[yt.length-1];
+      var sy=function(y){return top+PH-(y-ymin)/(ymax-ymin)*PH;};pn.sy=sy;
+      yt.forEach(function(v){svg+='<line class="gl" x1="'+L+'" x2="'+(W-R)+'" y1="'+sy(v).toFixed(1)+'" y2="'+sy(v).toFixed(1)+'"/><text x="'+(L-6)+'" y="'+(sy(v)+4).toFixed(1)+'" text-anchor="end">'+(pn.k==='wpp'||pn.k==='water'?fmt(v):v.toFixed(nt.dec))+'</text>';});
+      svg+='<line class="ga" x1="'+L+'" x2="'+(W-R)+'" y1="'+(top+PH)+'" y2="'+(top+PH)+'"/>';
+      svg+='<g clip-path="url(#gclip'+i+')">';
+      pn.vis.forEach(function(s){
+        if(!s.pts.length)return;
+        var d=s.pts.map(function(p,j){return (j?'L':'M')+sx(p.x).toFixed(1)+' '+sy(p.y).toFixed(1);}).join('');
+        svg+='<path class="ln" d="'+d+'" style="stroke:'+s.color+'"'+(s.dash?' stroke-dasharray="6 4"':'')+'/>';
+        if(s.mk)s.pts.forEach(function(p){if(s.mk[p.d])svg+='<circle class="rotd" cx="'+sx(p.x).toFixed(1)+'" cy="'+sy(p.y).toFixed(1)+'" r="5.5" style="stroke:'+s.color+'"/>';});
+        if(s.pts.length===1)svg+='<circle cx="'+sx(s.pts[0].x).toFixed(1)+'" cy="'+sy(s.pts[0].y).toFixed(1)+'" r="4" style="fill:'+s.color+'"/>';
+      });
+      svg+='</g>';
     });
-    svg+='</g>';
-    svg+='<line id="gcur" class="gcur" y1="'+T+'" y2="'+(T+ph)+'" style="display:none"/><g id="gdots"></g>'+
-      '<rect id="ghit" x="'+L+'" y="'+T+'" width="'+pw+'" height="'+ph+'" fill="transparent"/>';
+    /* 동(또는 파트) 하나만 볼 때는 작업한 날을 세로 점선으로 모든 그래프에 이어 그린다 */
+    var one={};panels.forEach(function(pn){if(hasRotMark(pn.k))pn.vis.forEach(function(s){if(s.key!=='0')one[s.key]=s;});});
+    var oneK=Object.keys(one);
+    if(oneK.length===1&&mark!=='none'){
+      var s1=one[oneK[0]];Object.keys(s1.mk||{}).forEach(function(d){var x=ageOf(s1.c,d)+0.5;if(x>=xmin&&x<=xmax)svg+='<line class="gmk" x1="'+sx(x).toFixed(1)+'" x2="'+sx(x).toFixed(1)+'" y1="'+(tops[0]-4)+'" y2="'+bot+'"/>';});
+    }
+    xt.forEach(function(v){svg+='<text x="'+sx(v).toFixed(1)+'" y="'+(H-8)+'" text-anchor="middle">'+v+'일령</text>';});
+    svg+='<line id="gcur" class="gcur" y1="'+(tops[0]-4)+'" y2="'+bot+'" style="display:none;stroke:var(--accent);stroke-width:1.5"/><g id="gdots"></g>'+
+      '<rect id="ghit" x="'+L+'" y="'+(tops[0]-TT)+'" width="'+pw+'" height="'+(bot-tops[0]+TT)+'" fill="transparent"/>';
     var nWk=Math.min(7,Math.ceil(fx1/7)),wkSel=zoomed&&g.zoomWk?String(g.zoomWk):'';
     var zctl='<div class="gzoom" role="group" aria-label="그래프 확대">'+
       '<button type="button" data-gz="in" aria-label="확대">＋</button><button type="button" data-gz="out" aria-label="축소"'+(zoomed?'':' disabled')+'>－</button>'+
@@ -2271,11 +2539,61 @@ function renderGraph(){
       '<button type="button" class="all" data-gz="all" aria-pressed="'+(!zoomed)+'">전체</button>'+
       (nWk>1?Array.apply(null,Array(nWk)).map(function(_,i){var n=i+1;return '<button type="button" class="wk" data-gz="w'+n+'" aria-pressed="'+(wkSel===String(n))+'">'+n+'주</button>';}).join(''):'')+
       '<span class="zr">'+(zoomed?'<b>'+Math.max(1,Math.ceil(xmin-0.05))+'~'+Math.floor(xmax+0.05)+'일령</b> 확대해서 보는 중 · ':'')+'그래프를 두 손가락으로 벌리거나 오므려도 됩니다</span></div>';
-    body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+m.label+' 비교 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg><div class="gtip" id="gtip" style="display:none"></div></div>'+zctl;
-    GH={vis:vis,m:m,sx:sx,sy:sy,W:W,H:H,L:L,R:R,T:T,ph:ph,pw:pw,xmin:xmin,xmax:xmax,cm:cm,fx0:fx0,fx1:fx1};
+    var ageList=Object.keys(ages).map(Number).sort(function(a,b){return a-b;});
+    body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+g.mets.map(function(k){return MET[k].label;}).join(', ')+' 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg></div>'+zctl+
+      '<div class="gday" id="gday" aria-live="polite"></div>';
+    GH={panels:panels,W:W,H:H,L:L,pw:pw,xmin:xmin,xmax:xmax,cm:cm,fx0:fx0,fx1:fx1,sx:sx,tops:tops,bot:bot,ages:ageList};
   }
-  pane.innerHTML='<div class="card">'+ctl+legend+cap+body+(cm&&S.cycles.length>=2?cycSummaryHTML():'')+'</div>';
-  if(GH)bindGraphHover();
+  pane.innerHTML='<div class="card">'+ctl+legend+cap+body+(cm&&S.cycles.length>=2?cycSummaryHTML():'')+'</div>'+
+    '<section class="card" id="evCard">'+effectHTML(cm)+'</section>';
+  if(GH){bindGraphHover();if(g.dayA!=null&&GH.ages.indexOf(g.dayA)>=0)showDay(g.dayA);else dayHint();}
+}
+function dayHint(){var b=$('gday');if(b)b.innerHTML='<p class="hint" style="margin:0">'+EM('👆')+'그래프에서 궁금한 날을 누르면, 그날 모든 항목의 값과 평소 흐름보다 얼마나 변했는지가 여기에 한꺼번에 나옵니다.</p>';}
+/* 고른 날(일령 a)의 값을 모든 항목·동(파트)에 대해 한 표로 */
+function dayBoxHTML(a){
+  var G=GH,g=S.g;if(!G)return '';
+  var keys=[],meta={},dateTxt='',ev=[],mname=g.mark==='hk'?'왕겨':'로터리';
+  G.panels.forEach(function(pn){pn.vis.forEach(function(s){if(!meta[s.key]){meta[s.key]=s;keys.push(s.key);}});});
+  var head=G.panels.map(function(pn){return '<th>'+MICON[pn.k]+' '+esc(pn.m.label)+(pn.m.unit&&pn.k!=='fdm'?'<br>'+pn.m.unit:'')+'</th>';}).join('');
+  var rows=keys.map(function(key){
+    var s0=meta[key],mk=false;
+    var cells=G.panels.map(function(pn){
+      var s=pn.vis.filter(function(x){return x.key===key;})[0];if(!s)return '<td class="c0">·</td>';
+      var pts=s.pts.filter(function(p){return p.a===a;});
+      if(!pts.length)return '<td class="c0">–</td>';
+      if(!dateTxt&&!G.cm)dateTxt=pts[0].d;
+      if(s.mk&&s.mk[pts[0].d])mk=true;
+      var noD=g.cum&&CNT.indexOf(pn.k)>=0;
+      /* 평소 흐름: 앞 5일의 추세로 예상한 그날 값 */
+      var base=function(lab){var v=s.pts.filter(function(p){return p.a>=a-5&&p.a<a&&(lab==null||p.lab===lab);}).map(function(p){return [p.a,p.y];});var e=linPred(v,a);return (e!=null&&DKIND[pn.k]==='pct'&&e<=0)?null:e;};
+      if(isEnv(pn.k)){
+        pts.sort(function(p,q){return p.lab==='최고'?-1:1;});
+        var lo=pts.filter(function(p){return p.lab==='최저';})[0]||pts[pts.length-1];
+        return '<td><b>'+pts.map(function(p){return gVal(pn.m,p.y);}).join(' / ')+'</b>'+(pn.k==='temp'?chgHTML('temp',lo.y,base(lo.lab)):'')+'</td>';
+      }
+      return '<td><b>'+gVal(pn.m,pts[0].y)+'</b>'+(noD?'':chgHTML(pn.k,pts[0].y,base(null)))+'</td>';
+    }).join('');
+    if(mk)ev.push(s0.name);
+    return '<tr><td><span class="sw6" style="background:'+s0.sw+'"></span>'+esc(G.cm?s0.name.split(' · ')[0]:s0.name)+(mk?' '+(g.mark==='hk'?'🌾':'🚜'):'')+'</td>'+cells+'</tr>';
+  }).join('');
+  return '<div class="gdh"><b>'+a+'일령</b>'+(dateTxt?'<span>'+dot(dateTxt)+'</span>':'')+
+    (ev.length?'<span class="ev">'+(g.mark==='hk'?'🌾':'🚜')+' '+mname+': '+esc(ev.map(function(n){return n.split(' · ')[0];}).join(', '))+'</span>':'')+'</div>'+
+    '<div class="scroll"><table><thead><tr><th></th>'+head+'</tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<p class="hint" style="margin:6px 0 0">아래 작은 글씨 = 평소 흐름(앞 5일 추세로 예상한 값)과 비교 · '+
+    '<span class="cw">▼주황</span>=급이·급수 줄어듦 · <span class="cb">▲빨강</span>=폐사 늘어남 · <span class="cc">▼파랑</span>=온도 내려감 · ≈ 평소 = 거의 같음</p>';
+}
+function showDay(a){
+  var G=GH;if(!G)return;S.g.dayA=a;
+  var cur=$('gcur'),dots=$('gdots'),box=$('gday');if(!cur)return;
+  var x=G.sx(a+0.5);
+  if(x<G.L-1||x>G.L+G.pw+1){cur.style.display='none';dots.innerHTML='';}
+  else{
+    cur.setAttribute('x1',x.toFixed(1));cur.setAttribute('x2',x.toFixed(1));cur.style.display='';
+    var dh='';
+    G.panels.forEach(function(pn){if(!pn.sy)return;pn.vis.forEach(function(s){s.pts.forEach(function(p){if(p.a===a)dh+='<circle cx="'+G.sx(p.x).toFixed(1)+'" cy="'+pn.sy(p.y).toFixed(1)+'" r="4.5" style="fill:'+s.color+';stroke:var(--surface);stroke-width:2"/>';});});});
+    dots.innerHTML=dh;
+  }
+  if(box)box.innerHTML=dayBoxHTML(a);
 }
 function graphZoom(act,ctr){
   var G=GH,g=S.g;if(!G)return;
@@ -2297,51 +2615,30 @@ function graphZoom(act,ctr){
   renderGraph();
 }
 function bindGraphHover(){
-  var svg=$('gsvg'),hit=$('ghit'),cur=$('gcur'),dots=$('gdots'),tip=$('gtip'),wrap=$('gwrap');
+  var svg=$('gsvg'),hit=$('ghit');
   if(!svg||!GH)return;
-  var G=GH,xsU=[],seen={};
-  G.vis.forEach(function(s){s.pts.forEach(function(p){var k=p.x.toFixed(4);if(!seen[k]){seen[k]=1;xsU.push(p.x);}});});
-  function move(e){
+  var G=GH;
+  function pick(e){
+    if(!G.ages.length)return;
     var r=svg.getBoundingClientRect(),k=G.W/r.width;
-    var px=(e.clientX-r.left)*k,xv=G.xmin+(px-G.L)/G.pw*(G.xmax-G.xmin);
-    var best=xsU[0],bd=Infinity;
-    xsU.forEach(function(x){var d=Math.abs(x-xv);if(d<bd){bd=d;best=x;}});
-    var rows=[],head=null,dh='';
-    G.vis.forEach(function(s){
-      for(var i=0;i<s.pts.length;i++){
-        var p=s.pts[i];
-        if(Math.abs(p.x-best)<1e-9){
-          rows.push({s:s,p:p});if(!head)head=p;
-          dh+='<circle cx="'+G.sx(p.x).toFixed(1)+'" cy="'+G.sy(p.y).toFixed(1)+'" r="4.5" style="fill:'+s.color+';stroke:var(--surface);stroke-width:2"/>';
-          break;
-        }
-      }
-    });
-    if(!head)return;
-    var cx=G.sx(best);
-    cur.setAttribute('x1',cx.toFixed(1));cur.setAttribute('x2',cx.toFixed(1));cur.style.display='';
-    dots.innerHTML=dh;
-    tip.innerHTML='<b>'+head.a+'일령'+(G.cm?'':' · '+head.d.slice(5).replace('-','.'))+(head.lab?' '+head.lab:'')+'</b>'+
-      rows.map(function(x){return '<div><span><i style="background:'+x.s.sw+'"></i>'+x.s.name+'</span><span>'+gVal(G.m,x.p.y)+gSub(x.p)+(G.m.k==='drate'?'':' '+G.m.unit)+(x.p.rot?' · 로터리':'')+'</span></div>';}).join('');
-    tip.style.display='';
-    var cssX=cx/k,tw=tip.offsetWidth,left=cssX+12;
-    if(left+tw>wrap.clientWidth)left=cssX-12-tw;
-    tip.style.left=Math.max(0,left)+'px';
+    var px=(e.clientX-r.left)*k,xv=G.xmin+(px-G.L)/G.pw*(G.xmax-G.xmin)-0.5;
+    var best=G.ages[0],bd=Infinity;
+    G.ages.forEach(function(x){var d=Math.abs(x-xv);if(d<bd){bd=d;best=x;}});
+    if(best!==S.g.dayA||!$('gday').innerHTML.trim())showDay(best);
   }
-  function leave(){cur.style.display='none';dots.innerHTML='';tip.style.display='none';}
   /* 두 손가락 확대·축소: 손을 뗄 때 한 번만 다시 그린다(버벅임 방지) */
   var pts={},pin=null;
   function pdist(){var k=Object.keys(pts);if(k.length<2)return 0;return Math.abs(pts[k[0]].x-pts[k[1]].x);}
   function pmid(){var k=Object.keys(pts),r=svg.getBoundingClientRect();var px=((pts[k[0]].x+pts[k[1]].x)/2-r.left)*(G.W/r.width);return G.xmin+(px-G.L)/G.pw*(G.xmax-G.xmin);}
   hit.addEventListener('pointerdown',function(e){
     pts[e.pointerId]={x:e.clientX};
-    if(Object.keys(pts).length===2){pin={d0:pdist(),c:pmid()};leave();}
-    else move(e);
+    if(Object.keys(pts).length===2){pin={d0:pdist(),c:pmid()};}
+    else pick(e);
   });
   hit.addEventListener('pointermove',function(e){
     if(pts[e.pointerId])pts[e.pointerId].x=e.clientX;
     if(pin){var d=pdist();if(pin.d0>20&&d>0){svg.style.transformOrigin='center';svg.style.transform='scaleX('+Math.max(.4,Math.min(3,d/pin.d0)).toFixed(3)+')';}return;}
-    move(e);
+    if(e.pointerType==='mouse'||pts[e.pointerId])pick(e);
   });
   function end(e){
     if(pin){
@@ -2353,7 +2650,119 @@ function bindGraphHover(){
   }
   hit.addEventListener('pointerup',end);
   hit.addEventListener('pointercancel',end);
-  hit.addEventListener('pointerleave',function(e){if(!pin){delete pts[e.pointerId];leave();}});
+  hit.addEventListener('pointerleave',function(e){if(!pin)delete pts[e.pointerId];});
+}
+
+/* ---------- 변화 찾기: 어떤 일이 있던 날, 다른 자료가 평소보다 얼마나 변했나 ----------
+   동 하나·하루를 한 단위로 보고, 그날 기준 2~4일 전 3일 평균을 '평소'로 삼아 전날·당일·다음날을 비교한다.
+   이미 불러온 기록으로만 계산하므로 읽기 한도를 쓰지 않는다. */
+var EVT=[
+  {k:'rot',em:'🚜',name:'로터리 친 날'},
+  {k:'hk',em:'🌾',name:'왕겨 넣은 날'},
+  {k:'cold',em:'🥶',name:'갑자기 추워진 날',desc:'최저온도가 평소보다 2℃ 이상 낮은 날',run:true},
+  {k:'hot',em:'🥵',name:'갑자기 더워진 날',desc:'최고온도가 평소보다 2℃ 이상 높은 날',run:true},
+  {k:'sick',em:'🩺',name:'폐사가 갑자기 는 날',desc:'폐사가 평소의 2배 이상, 3수 이상 많은 날',run:true}
+];
+var EFM=[{k:'fdm',lab:'급이시간',sh:'급이',em:'⏱️'},{k:'wpp',lab:'마리당 급수',sh:'급수',em:'🚰'},{k:'dead',lab:'폐사',sh:'폐사',em:'☠️'},{k:'tmin',lab:'최저온도',sh:'최저온도',em:'🌡️'}];
+function effUnits(cm){
+  var g=S.g,out=[];
+  if(!cm){
+    var c=cyc();if(!c)return out;var src=cycSrc(c.id),HM=headsMap(c,src.entries);
+    HOUSES.forEach(function(h){if(!g.off[String(h)])out.push({grp:String(h),gname:h+'동',color:gColor(h),by:dayRows(c,src,[h],HM)});});
+  }else{
+    var hs=scopeHs();
+    g.sel.forEach(function(cid){
+      var c2=cycleById(cid),src2=cycSrc(cid);if(!c2||!src2)return;
+      var HM2=headsMap(c2,src2.entries);
+      hs.forEach(function(h){out.push({grp:cid,gname:cycLabel(c2).split(' · ')[0],color:'var(--s'+g.color[cid]+')',by:dayRows(c2,src2,[h],HM2)});});
+    });
+  }
+  return out;
+}
+function effCalc(units){
+  var R={};EVT.forEach(function(e){R[e.k]={n:0,grp:{},m:{}};EFM.forEach(function(f){R[e.k].m[f.k]=[[],[],[]];});});
+  units.forEach(function(u){
+    var by=u.by,ks=Object.keys(by).sort();if(!ks.length)return;
+    var n0=dayNum(ks[0]),n1=dayNum(ks[ks.length-1]);
+    var val=function(n,k){
+      if(n<n0||n>n1)return null;var r=by[isoDay(n)];
+      if(k==='dead')return r?r.dead:0;
+      return r?(k==='fdm'?r.fdm:k==='wpp'?r.wpp:k==='tmin'?r.tmin:k==='tmax'?r.tmax:null):null;
+    };
+    var base=function(n,k){var a=[];for(var i=n-4;i<=n-2;i++){var v=val(i,k);if(v!=null)a.push(v);}return a.length>=2?mean(a):null;};
+    /* 그 일이 없었다면 나왔을 값: 앞(2~4일 전)과 뒤(3~5일 후) 평균을 이은 선 위의 값. 뒤 자료가 없으면 앞 5일 추세로 예상 */
+    var expect=function(n,k,off){
+      var pre=base(n,k),post=null,pa=[];for(var i=n+3;i<=n+5;i++){var v=val(i,k);if(v!=null)pa.push(v);}if(pa.length>=2)post=mean(pa);
+      if(pre!=null&&post!=null)return pre+(post-pre)*(off+3)/7;
+      var xy=[];for(var j=n-6;j<=n-2;j++){var w=val(j,k);if(w!=null)xy.push([j,w]);}
+      return xy.length>=3?linPred(xy,n+off):pre;
+    };
+    var test=function(ek,n){
+      var r=by[isoDay(n)];
+      if(ek==='rot')return !!(r&&r.rot>0);
+      if(ek==='hk')return !!(r&&r.hk>0);
+      if(ek==='cold'){var v=val(n,'tmin'),b=base(n,'tmin');return v!=null&&b!=null&&v<=b-2;}
+      if(ek==='hot'){var v2=val(n,'tmax'),b2=base(n,'tmax');return v2!=null&&b2!=null&&v2>=b2+2;}
+      if(ek==='sick'){var v3=val(n,'dead'),b3=base(n,'dead');return v3!=null&&b3!=null&&v3>=3&&v3>=2*b3&&v3-b3>=3;}
+      return false;
+    };
+    for(var n=n0+4;n<=n1;n++){
+      EVT.forEach(function(e){
+        if(!test(e.k,n)||(e.run&&test(e.k,n-1)))return;
+        var r=R[e.k],gp=r.grp[u.grp]||(r.grp[u.grp]={name:u.gname,color:u.color,n:0,m:{}});
+        r.n++;gp.n++;
+        EFM.forEach(function(f){
+          [-1,0,1].forEach(function(off,i){var b=expect(n,f.k,off);if(b==null)return;var o=chgOf(f.k,val(n+off,f.k),b);if(o){r.m[f.k][i].push(o.d);if(off===0)(gp.m[f.k]=gp.m[f.k]||[]).push(o.d);}});
+        });
+      });
+    }
+  });
+  return R;
+}
+var EFTH={fdm:5,wpp:5,dead:1,tmin:1};
+function effTxt(k,v){
+  var sig=Math.abs(v)>=EFTH[k],t=k==='dead'?fmtN(Math.abs(Math.round(v*10)/10))+'수':k==='tmin'?Math.abs(v).toFixed(1)+'℃':Math.abs(v).toFixed(0)+'%';
+  return {sig:sig,cls:chgCls(k,v,sig),t:sig?(v>0?'▲':'▼')+t:'≈'};
+}
+function effCell(k,arr,tag){
+  if(!arr||!arr.length)return '<'+tag+' class="c0">–</'+tag+'>';
+  var o=effTxt(k,mean(arr));return '<'+tag+'><b class="'+o.cls+'">'+o.t+'</b></'+tag+'>';
+}
+function effSentence(ek,r){
+  var lab={fdm:'급이',wpp:'급수',dead:'폐사',tmin:'최저온도'},bits=[],pre=[],rec=false;
+  var sp=function(k,v){var o=effTxt(k,v);return lab[k]+' <span class="'+o.cls+'">'+o.t+'</span>';};
+  ['fdm','wpp','dead','tmin'].forEach(function(k){
+    if((ek==='cold'||ek==='hot')&&k==='tmin')return;if(ek==='sick'&&k==='dead')return;
+    var a=r.m[k][1];if(!a.length)return;var v=mean(a);if(Math.abs(v)<EFTH[k])return;bits.push(sp(k,v));
+    if(k==='fdm'||k==='wpp'){var nx=r.m[k][2];if(nx.length&&Math.abs(mean(nx))<Math.abs(v)/2)rec=true;}
+  });
+  ['fdm','wpp'].forEach(function(k){var a=r.m[k][0];if(a.length&&Math.abs(mean(a))>=EFTH[k])pre.push(sp(k,mean(a)));});
+  if(ek==='cold'||ek==='hot'){var t=r.m.tmin[1];if(t.length)bits.unshift(sp('tmin',mean(t)));}
+  return (pre.length?'전날부터 '+pre.join(', ')+' → ':'')+(bits.length?'당일 '+bits.join(', '):'당일 눈에 띄는 변화 없음')+(rec?' · 다음날 거의 회복':'');
+}
+function effectHTML(cm){
+  var g=S.g,units=effUnits(cm);
+  var head='<h2>'+EM('🔍')+'변화 찾기</h2><p class="hint" style="margin:0">'+(cm?'고른 '+g.sel.length+'개 파트 · '+(g.scope==='all'?'전체 동':g.scope+'동'):'이 입식 · 위에서 켜 둔 동')+
+    ' 기준. 아래 일이 있었던 날, 평소 흐름보다 급이·급수·폐사·온도가 얼마나 변했는지 자동으로 모았습니다. 오리가 크면서 매일 느는 양은 빼고(앞뒤 며칠의 흐름으로 예상한 값과 비교) 그 일 때문에 생긴 변화만 봅니다.</p>';
+  if(!units.length)return head+'<p class="evnone">'+(cm?'비교할 파트 기록을 불러오는 중이거나 고른 파트가 없습니다.':'켜 둔 동이 없습니다.')+'</p>';
+  var R=effCalc(units),hasSmart=units.some(function(u){return Object.keys(u.by).some(function(d){var r=u.by[d];return r.fdm!=null||r.wpp!=null;});});
+  var none=[],cards=EVT.map(function(e){
+    var r=R[e.k];if(!r.n){none.push(e.em+' '+e.name);return '';}
+    var gk=Object.keys(r.grp);
+    return '<div class="evc"><div class="evh"><span class="evi" aria-hidden="true">'+e.em+'</span><b>'+e.name+'</b><small>'+r.n+'번<br>'+(cm?'파트 ':'동 ')+gk.length+'개</small></div>'+
+      (e.desc?'<p class="hint" style="margin:4px 0 0">'+e.desc+'</p>':'')+
+      '<p class="evs">'+effSentence(e.k,r)+'</p>'+
+      '<table class="evt"><thead><tr><th>평소와 비교</th><th>전날</th><th class="now">당일</th><th>다음날</th></tr></thead><tbody>'+
+      EFM.map(function(f){return '<tr><td>'+f.em+' '+f.lab+'</td>'+[0,1,2].map(function(i){return effCell(f.k,r.m[f.k][i],'td');}).join('')+'</tr>';}).join('')+
+      '</tbody></table>'+
+      (gk.length>1?'<details><summary>'+(cm?'파트별로':'동별로')+' 나눠 보기 (당일)</summary><div class="scroll"><table class="evt"><thead><tr><th></th><th>⏱️ 급이</th><th>🚰 급수</th><th>☠️ 폐사</th><th>횟수</th></tr></thead><tbody>'+
+        gk.map(function(k){var gp=r.grp[k];return '<tr><td><span class="sw6" style="background:'+gp.color+'"></span>'+esc(gp.name)+'</td>'+effCell('fdm',gp.m.fdm,'td')+effCell('wpp',gp.m.wpp,'td')+effCell('dead',gp.m.dead,'td')+'<td>'+gp.n+'</td></tr>';}).join('')+
+        '</tbody></table></div></details>':'')+'</div>';
+  }).join('');
+  return head+(hasSmart?'':'<p class="hint" style="margin:6px 0 0">'+EM('💧')+'급이시간·급수는 스마트팜 자료가 들어오면 함께 계산됩니다. 지금은 폐사·온도만 비교합니다.</p>')+
+    '<div class="evwrap" style="margin-top:8px">'+(cards||'<p class="evnone">아직 비교할 만한 날이 없습니다. 기록이 며칠 더 쌓이면 나타납니다.</p>')+'</div>'+
+    (none.length&&cards?'<p class="evnone">아직 없는 경우: '+none.join(' · ')+'</p>':'')+
+    '<p class="hint">급이·급수는 % 변화, 폐사는 하루 마릿수 차이, 온도는 ℃ 차이입니다. 갑자기 추워짐·더워짐·폐사 증가는 그 2~4일 전 평균과 비교해 찾습니다. 변화가 작으면(급이·급수 5% 미만, 폐사·온도 1 미만) ≈로 표시합니다. 같은 일이 며칠 이어지면 첫날만 셉니다.</p>';
 }
 
 /* ---------- 엑셀로 받기: 입식·내용·동을 골라서 선택한 것만 ---------- */
@@ -2381,6 +2790,7 @@ function openExport(cid){
       '<label><input type="checkbox" name="xw" value="info" checked>입식 정보 (입식일·마릿수·비고)</label>'+
       '<label><input type="checkbox" name="xw" value="count" checked>일별 도태·폐사·사료 입고</label>'+
       '<label><input type="checkbox" name="xw" value="temp" checked>일별 온도·습도 (최고·최저) · 날씨</label>'+
+      '<label><input type="checkbox" name="xw" value="smart" checked>일별 급수·급이시간 (스마트팜 자료)</label>'+
       '<label><input type="checkbox" name="xw" value="note" checked>일별 비고(메모)</label>'+
       '<label><input type="checkbox" name="xw" value="sum" checked>동별 요약 (누계·폐사율·마리당 사료·요구율)</label></div>'+
     lab('동 선택')+'<div class="radios">'+hs+'</div>'+
@@ -2422,8 +2832,9 @@ function xlBuild(cycles,datas,opt){
   }
   cycles.forEach(function(c,i){
     var tag=c.stockDate.slice(2).replace(/-/g,''),data=datas[i];
-    if(opt.count||opt.temp||opt.note){
-      var m={},row=function(d,h){var k=d+'|'+h;return m[k]||(m[k]={d:d,h:h,cull:null,dead:null,feed:null,tmax:null,tmin:null,hmax:null,hmin:null,wx:null,ws:null,wd:null,pr:null,memo:''});};
+    if(opt.count||opt.temp||opt.note||opt.smart){
+      var HMx=opt.smart?headsMap(c,data.entries):null;
+      var m={},row=function(d,h){var k=d+'|'+h;return m[k]||(m[k]={d:d,h:h,cull:null,dead:null,feed:null,tmax:null,tmin:null,hmax:null,hmin:null,wx:null,ws:null,wd:null,pr:null,wat:null,wpp:null,fdm:null,memo:''});};
       if(opt.count)data.entries.forEach(function(e){
         if(hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||['cull','dead','feed'].indexOf(e.t)<0)return;
         var r=row(e.d,e.h);r[e.t]=(r[e.t]||0)+(Number(e.q)||0);
@@ -2432,11 +2843,12 @@ function xlBuild(cycles,datas,opt){
         if(!dd||!dd.d||dd.d<c.stockDate||opt.houses.indexOf(dd.h)<0)return;
         if(opt.temp){ALLF.forEach(function(f){var v=thv(dd,f.f);if(isNum(v))row(dd.d,dd.h)[f.f]=v;});if(dd.h===0){var rr=row(dd.d,0);if(dd.wx)rr.wx=WX[dd.wx]?WX[dd.wx][1]:String(dd.wx);if(isNum(dd.ws))rr.ws=dd.ws;if(wdName(dd.wd))rr.wd=wdName(dd.wd);if(isNum(dd.pr))rr.pr=dd.pr;}}
         if(opt.note&&dd.h>0&&dd.memo&&String(dd.memo).trim())row(dd.d,dd.h).memo=String(dd.memo).trim();
+        if(opt.smart&&dd.h>0){var sw=smv(dd,'wat'),sf=smv(dd,'fdm');if(sw!=null||sf!=null){var rs=row(dd.d,dd.h),h0=(HMx[dd.d]||{})[dd.h]||0;if(sw!=null){rs.wat=sw;rs.wpp=h0>0?Math.round(sw*1000/h0):null;}if(sf!=null)rs.fdm=sf;}}
       });
       var list=Object.keys(m).map(function(k){return m[k];}).sort(function(a,b){return a.d<b.d?-1:a.d>b.d?1:(a.h||9)-(b.h||9);});
-      var head3=['날짜','일령','동'].concat(opt.count?['도태','폐사','사료 입고(kg)']:[]).concat(opt.temp?['최고 ℃','최저 ℃','최고 %','최저 %','날씨','풍속(m/s)','풍향','강수(mm)']:[]).concat(opt.note?['비고']:[]);
+      var head3=['날짜','일령','동'].concat(opt.count?['도태','폐사','사료 입고(kg)']:[]).concat(opt.temp?['최고 ℃','최저 ℃','최고 %','최저 %','날씨','풍속(m/s)','풍향','강수(mm)']:[]).concat(opt.smart?['급수(L)','마리당 급수(mL)','급이시간(분)']:[]).concat(opt.note?['비고']:[]);
       var rows3=list.map(function(r){
-        return [r.d,ageOf(c,r.d),hl(r.h)].concat(opt.count?[r.cull,r.dead,r.feed]:[]).concat(opt.temp?[r.tmax,r.tmin,r.hmax,r.hmin,r.wx,r.ws,r.wd,r.pr]:[]).concat(opt.note?[r.memo||null]:[]);
+        return [r.d,ageOf(c,r.d),hl(r.h)].concat(opt.count?[r.cull,r.dead,r.feed]:[]).concat(opt.temp?[r.tmax,r.tmin,r.hmax,r.hmin,r.wx,r.ws,r.wd,r.pr]:[]).concat(opt.smart?[r.wat,r.wpp,r.fdm]:[]).concat(opt.note?[r.memo||null]:[]);
       });
       sheets.push({name:'일별 기록 '+tag,aoa:[head3].concat(rows3)});
     }
@@ -2453,7 +2865,7 @@ async function doExport(){
   var err=$('xErr');err.hidden=true;
   var fail=function(m){err.textContent=m;err.hidden=false;};
   var ids=xlChecked('xc'),what=xlChecked('xw'),houses=xlChecked('xh').map(Number);
-  var opt={info:what.indexOf('info')>=0,count:what.indexOf('count')>=0,temp:what.indexOf('temp')>=0,note:what.indexOf('note')>=0,sum:what.indexOf('sum')>=0,houses:houses};
+  var opt={info:what.indexOf('info')>=0,count:what.indexOf('count')>=0,temp:what.indexOf('temp')>=0,note:what.indexOf('note')>=0,sum:what.indexOf('sum')>=0,smart:what.indexOf('smart')>=0,houses:houses};
   if(!ids.length)return fail('내보낼 입식을 하나 이상 선택하세요.');
   if(!what.length)return fail('포함할 내용을 하나 이상 선택하세요.');
   if(opt.count||opt.note||opt.sum){
@@ -2539,7 +2951,17 @@ function bind(){
     var jp=e.target.closest('[data-jump]');
     if(jp){var hc=document.querySelector('.house[data-h="'+jp.dataset.jump+'"]');if(hc)hc.scrollIntoView({block:'start',behavior:'smooth'});return;}
     var gm=e.target.closest('[data-gm]');
-    if(gm){S.g.metric=gm.dataset.gm;renderGraph();return;}
+    if(gm){
+      var mk=gm.dataset.gm,ms=S.g.mets,mi=ms.indexOf(mk);
+      if(mi>=0){if(ms.length<2){toast('항목을 하나 이상 골라야 합니다');return;}ms.splice(mi,1);}
+      else{if(ms.length>=MAXP){toast('한 번에 '+MAXP+'개까지 나란히 볼 수 있습니다. 하나를 끄고 고르세요');return;}ms.push(mk);}
+      S.g.preset=null;renderGraph();return;
+    }
+    var gp=e.target.closest('[data-gp]');
+    if(gp){var pr=PRESETS.filter(function(x){return x.k===gp.dataset.gp;})[0];if(pr){S.g.mets=pr.mets.slice();S.g.mark=pr.mark;S.g.preset=pr.k;S.g.cum=false;}renderGraph();return;}
+    if(e.target.closest('[data-gdet]')){S.g.detOpen=!e.target.closest('details').open;return;}
+    var gk=e.target.closest('[data-gk]');
+    if(gk){S.g.mark=gk.dataset.gk;renderGraph();return;}
     var gw=e.target.closest('[data-gw]');
     if(gw){S.g.win=gw.dataset.gw;renderGraph();return;}
     
@@ -2550,14 +2972,14 @@ function bind(){
     var gz=e.target.closest('[data-gz]');
     if(gz){if(!gz.disabled)graphZoom(gz.dataset.gz);return;}
     var gmo=e.target.closest('[data-gmode]');
-    if(gmo){S.g.mode=gmo.dataset.gmode;renderGraph();return;}
+    if(gmo){S.g.mode=gmo.dataset.gmode;S.g.dayA=null;renderGraph();return;}
     var gsc=e.target.closest('[data-gsc]');
     if(gsc){S.g.scope=gsc.dataset.gsc;renderGraph();return;}
     var gcy=e.target.closest('[data-gcy]');
     if(gcy){
       var gid=gcy.dataset.gcy,ix=S.g.sel.indexOf(gid);
       if(ix>=0){S.g.sel.splice(ix,1);delete S.g.color[gid];}
-      else if(S.g.sel.length>=5){toast('최대 5개까지 비교할 수 있습니다');return;}
+      else if(S.g.sel.length>=MAXC){toast('최대 '+MAXC+'개(1년 최대 파트 수)까지 비교할 수 있습니다');return;}
       else cmpAdd(gid);
       S.g.selInit=true;renderGraph();return;
     }
@@ -2605,6 +3027,7 @@ function bind(){
       return;
     }
     if(t.name==='fts'){S.ftSel=t.value;feedTags();return;}
+    if(t.classList.contains('fin')){fexSet(Number(t.dataset.h),!t.checked);feedRecalc();fexSync();return;}
     if(t.classList.contains('qin')){
       var rawQ=t.value.trim().replace(/,/g,'');if(!rawQ)return;
       var q=Number(rawQ);if(!isFinite(q)||q===0){t.value='';return;}
