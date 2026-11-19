@@ -486,6 +486,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .evc details{margin-top:8px}
 .evc summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:40px;display:flex;align-items:center}
 .evnone{color:var(--muted);font-size:14px}
+.gsvg text.gval{font-size:13px;font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;font-family:var(--font-display)}
 .dpick{position:relative;flex:1 1 0;min-width:0;height:50px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-weight:600;font-size:21px;white-space:nowrap;overflow:hidden;cursor:pointer}
 .datebar .dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
 .gdet{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;background:rgba(255,255,255,.02)}
@@ -2547,7 +2548,7 @@ function renderGraph(){
     var ageList=Object.keys(ages).map(Number).sort(function(a,b){return a-b;});
     body='<div class="gwrap" id="gwrap"><svg class="gsvg" id="gsvg" viewBox="0 0 '+W+' '+H+'" role="img" aria-label="'+g.mets.map(function(k){return MET[k].label;}).join(', ')+' 그래프. 자세한 값은 표 보기에서 확인할 수 있습니다.">'+svg+'</svg></div>'+zctl+
       '<div class="gday" id="gday" aria-live="polite"></div>';
-    GH={panels:panels,W:W,H:H,L:L,pw:pw,xmin:xmin,xmax:xmax,cm:cm,fx0:fx0,fx1:fx1,sx:sx,tops:tops,bot:bot,ages:ageList};
+    GH={panels:panels,W:W,H:H,L:L,PH:PH,pw:pw,xmin:xmin,xmax:xmax,cm:cm,fx0:fx0,fx1:fx1,sx:sx,tops:tops,bot:bot,ages:ageList};
   }
   pane.innerHTML='<div class="card">'+ctl+legend+cap+body+(cm&&S.cycles.length>=2?cycSummaryHTML():'')+'</div>'+
     '<section class="card" id="evCard">'+effectHTML(cm)+'</section>';
@@ -2594,8 +2595,26 @@ function showDay(a){
   if(x<G.L-1||x>G.L+G.pw+1){cur.style.display='none';dots.innerHTML='';}
   else{
     cur.setAttribute('x1',x.toFixed(1));cur.setAttribute('x2',x.toFixed(1));cur.style.display='';
-    var dh='';
-    G.panels.forEach(function(pn){if(!pn.sy)return;pn.vis.forEach(function(s){s.pts.forEach(function(p){if(p.a===a)dh+='<circle cx="'+G.sx(p.x).toFixed(1)+'" cy="'+pn.sy(p.y).toFixed(1)+'" r="4.5" style="fill:'+s.color+';stroke:var(--surface);stroke-width:2"/>';});});});
+    var dh='',right=x>G.L+G.pw*0.62;
+    G.panels.forEach(function(pn,i){
+      if(!pn.sy)return;
+      var labs=[];
+      pn.vis.forEach(function(s){s.pts.forEach(function(p){
+        if(p.a!==a)return;
+        var cx=G.sx(p.x),cy=pn.sy(p.y);
+        dh+='<circle cx="'+cx.toFixed(1)+'" cy="'+cy.toFixed(1)+'" r="4.5" style="fill:'+s.color+';stroke:var(--surface);stroke-width:2"/>';
+        labs.push({y:cy,cx:cx,t:gVal(pn.m,p.y),c:s.color});
+      });});
+      /* 누른 자리 숫자: 겹치지 않게 위아래로 조금씩 벌려서 점 옆에 쓴다 */
+      var top=G.tops[i],bot=top+G.PH,gap=15;
+      labs.sort(function(p,q){return p.y-q.y;});
+      for(var j=0;j<labs.length;j++){labs[j].ly=Math.max(labs[j].y+4,top+11);if(j&&labs[j].ly<labs[j-1].ly+gap)labs[j].ly=labs[j-1].ly+gap;}
+      for(var k=labs.length-1;k>=0;k--){var lim=k===labs.length-1?bot-2:labs[k+1].ly-gap;if(labs[k].ly>lim)labs[k].ly=lim;}
+      labs.forEach(function(l){
+        var tx=right?l.cx-9:l.cx+9;
+        dh+='<text class="gval" x="'+tx.toFixed(1)+'" y="'+l.ly.toFixed(1)+'" text-anchor="'+(right?'end':'start')+'" style="fill:'+l.c+'">'+esc(l.t)+'</text>';
+      });
+    });
     dots.innerHTML=dh;
   }
   if(box)box.innerHTML=dayBoxHTML(a);
