@@ -2120,7 +2120,7 @@ function houseSeries(c,g){
     [1,2,3,4,5].forEach(function(h){
       var pts=[],run=0;
       if(g.metric==='fpp'){
-        pts=fppDaily(c,cycTotals(c,cycSrc(c.id),[h]),shipOf(c.id));
+        pts=fppDaily(c,cycSrc(c.id),[h],shipOf(c.id));
       }else if(g.metric==='drate'){
         if(dates.length)pts=drPts(c,cycTotals(c,cycSrc(c.id),[h]),rotBy[h],!!g.cum,dates[0],dates[dates.length-1]);
       }else if(dates.length){
@@ -2158,19 +2158,19 @@ function cmpStore(cid){
   var src=S.g.cache[cid],si=shipOf(cid);
   if(!src||src.err||src.ls||!(si&&si.date&&si.W>0))return;
   try{
-    var m={},KEEP=['tmax','tmin','hmax','hmin','tm','tn','te','hm','hn','he','wat','fdm'];
+    var m={},KEEP=['tmax','tmin','hmax','hmin','tm','tn','te','hm','hn','he','wat','fdm','rem'];
     src.entries.forEach(function(e){if(!e||!e.d||e.h==null||!e.t)return;var k=e.d+'|'+e.h+'|'+e.t;m[k]=(m[k]||0)+(Number(e.q)||0);});
     var ds=src.days.map(function(d){
       if(!d||!d.d||d.h==null)return null;var o={d:d.d,h:d.h};if(d.rot===true)o.rot=true;if(d.hk===true)o.hk=true;
       KEEP.forEach(function(f){if(isNum(d[f]))o[f]=d[f];});return o;
     }).filter(Boolean);
-    lsSet('wl-g-'+cid,JSON.stringify({v:1,e:Object.keys(m).map(function(k){var p=k.split('|');return [p[0],Number(p[1]),p[2],Math.round(m[k]*10)/10];}),d:ds,ship:si}));
+    lsSet('wl-g-'+cid,JSON.stringify({v:2,e:Object.keys(m).map(function(k){var p=k.split('|');return [p[0],Number(p[1]),p[2],Math.round(m[k]*10)/10];}),d:ds,ship:si}));
   }catch(e){}
 }
 function cmpLoad(cid){
   try{
     var o=JSON.parse(lsGet('wl-g-'+cid)||'null');
-    if(!o||o.v!==1||!Array.isArray(o.e)||!Array.isArray(o.d))return null;
+    if(!o||o.v!==2||!Array.isArray(o.e)||!Array.isArray(o.d))return null;
     return {src:{ls:true,entries:o.e.map(function(a){return {d:a[0],h:a[1],t:a[2],q:a[3]};}),days:o.d},ship:o.ship||null};
   }catch(e){return null;}
 }
@@ -2189,31 +2189,64 @@ function cycTotals(c,src,hs){
   });
   return {init:init,doc:docOf(c,hs),by:by,tot:tot,last:last};
 }
-/* 마리당 사료(일별): 사료를 입고한 날부터 다음 입고 전날까지, 입고량을 날수로 나눠 그날 마릿수로 나눈다.
-   마지막 입고는 출하일까지(출하일 포함) 쓴 것으로 본다. 출하 정보가 없으면 마지막 구간은 그리지 않는다. */
-function fppDaily(c,T,si){
-  var pts=[],fd=Object.keys(T.by).filter(function(d){return T.by[d].feed!==0;}).sort();
-  var endDay=(si&&si.date)?si.date:null;
-  if(endDay)fd=fd.filter(function(d){return d<=endDay;});
-  if(!fd.length)return pts;
-  var run={cull:0,dead:0},dn=Object.keys(T.by).sort(),idx=0,cumF=0;
-  var headsAt=function(d){
-    while(idx<dn.length&&dn[idx]<=d){run.cull+=T.by[dn[idx]].cull;run.dead+=T.by[dn[idx]].dead;idx++;}
-    return T.init-run.cull-run.dead;
-  };
+/* ---------- 마리당 사료(일별) 계산 ----------
+   동마다 따로 계산한 뒤 합친다(사료를 동마다 다른 날 넣거나, 어떤 동은 빼고 넣어도 맞게).
+   한 동의 한 구간 = 입고한 날 ~ 다음 입고 전날
+     그 구간에 먹은 양 = 이번 입고량 + 입고 때 남아 있던 재고 − 다음 입고 때 남아 있던 재고
+     (남은 재고는 사료 입고 계산의 '남은 재고' 칸에 넣은 값. 안 넣었으면 0 = 다 비우고 넣은 것으로 본다)
+     하루치 = 먹은 양 ÷ 구간 날수
+   마지막 구간(다음 입고가 아직 없음):
+     출하했으면 출하일까지, 남은 재고 0으로 계산
+     사육 중이면 오늘까지, 앞 구간들의 마리당 하루 섭취량 추세로 '예상'해서 그린다 */
+function feedHouseDays(c,src,h,si){
+  var q={},rem={},out={};
+  src.entries.forEach(function(e){if(e&&e.h===h&&e.t==='feed'&&e.d&&e.d>=c.stockDate){q[e.d]=(q[e.d]||0)+(Number(e.q)||0);}});
+  src.days.forEach(function(dd){if(dd&&dd.h===h&&dd.d&&typeof dd.rem==='number'&&isFinite(dd.rem)&&dd.rem>0)rem[dd.d]=dd.rem;});
+  var endShip=(si&&si.date)?si.date:null;
+  var fd=Object.keys(q).filter(function(d){return q[d]>0&&(!endShip||d<=endShip);}).sort();
+  if(!fd.length)return out;
+  var lossBy={};src.entries.forEach(function(e){if(e&&e.h===h&&(e.t==='dead'||e.t==='cull')&&e.d)lossBy[e.d]=(lossBy[e.d]||0)+(Number(e.q)||0);});
+  var heads=function(n){var l=0;Object.keys(lossBy).forEach(function(d){if(dayNum(d)<n)l+=lossBy[d];});return headsOf(c,h)-l;};
+  var rates=[];/* 끝난 구간의 [가운데 날, 마리당 하루 kg] */
   for(var i=0;i<fd.length;i++){
-    var a=dayNum(fd[i]),b,qty=0;
-    for(var j=0;j<fd.length;j++)if(fd[j]===fd[i])qty=T.by[fd[i]].feed;
-    if(i+1<fd.length)b=dayNum(fd[i+1])-1;
-    else if(endDay)b=dayNum(endDay);
-    else break;
-    if(b<a)b=a;
-    var days=b-a+1,per=qty/days;
-    for(var n=a;n<=b;n++){
-      var d=isoDay(n),now=headsAt(d);
-      cumF+=per;
-      if(now>0){pts.push({x:ageOf(c,d)+0.5,y:cumF/now,s:per/now,d:d,a:ageOf(c,d),lab:''});}
+    var a=dayNum(fd[i]),qty=q[fd[i]]+(rem[fd[i]]||0),open=i+1>=fd.length,b,used;
+    if(!open){
+      b=dayNum(fd[i+1])-1;used=qty-(rem[fd[i+1]]||0);
+      if(used<0)used=qty;/* 남은 재고를 잘못 넣은 경우: 다 먹은 것으로 */
+    }else if(endShip){b=dayNum(endShip);used=qty;}
+    else{
+      b=Math.min(dayNum(todayStr()),dayNum(maxDateOf(c)));if(b<a)break;
+      /* 예상: 끝난 구간들(최근 4개)의 마리당 하루 섭취량을 직선으로 이어 늘려 본다. 구간 하나가 튀어도 덜 흔들리게 */
+      var rr=rates.slice(-4);
+      for(var n=a;n<=b;n++){
+        if(!rr.length)break;
+        var r=Math.max(0,rr.length<2?rr[0][1]:linPred(rr,n));
+        out[isoDay(n)]={kg:r*heads(n),est:true};
+      }
+      break;
     }
+    if(b<a)b=a;
+    var days=b-a+1,per=used/days,hsum=0;
+    for(var m=a;m<=b;m++){out[isoDay(m)]={kg:per,est:false};hsum+=heads(m);}
+    if(hsum>0)rates.push([(a+b)/2,used/hsum]);
+  }
+  return out;
+}
+function fppDaily(c,src,hs,si){
+  var pts=[],sum={},est={},init=0;
+  hs.forEach(function(h){
+    init+=headsOf(c,h);
+    var o=feedHouseDays(c,src,h,si);
+    Object.keys(o).forEach(function(d){sum[d]=(sum[d]||0)+o[d].kg;if(o[d].est)est[d]=1;});
+  });
+  var ds=Object.keys(sum).sort();if(!ds.length)return pts;
+  var loss={};src.entries.forEach(function(e){if(e&&hs.indexOf(e.h)>=0&&(e.t==='dead'||e.t==='cull')&&e.d)loss[e.d]=(loss[e.d]||0)+(Number(e.q)||0);});
+  var lk=Object.keys(loss).sort(),li=0,run=0,cumF=0;
+  for(var n=dayNum(ds[0]);n<=dayNum(ds[ds.length-1]);n++){
+    var d=isoDay(n);
+    while(li<lk.length&&lk[li]<=d){run+=loss[lk[li]];li++;}
+    var now=init-run,kg=sum[d]||0;cumF+=kg;
+    if(now>0&&sum[d]!=null){var a2=ageOf(c,d),pd=kg/now;pts.push({x:a2+0.5,y:cumF/now,s:pd,st:est[d]?pd.toFixed(3)+' 예상':null,d:d,a:a2,lab:''});}
   }
   return pts;
 }
@@ -2260,7 +2293,7 @@ function cycleSeriesPts(c,src,hs,g,hours){
     if(fk>0)pts.push({x:ageOf(c,si.date)+0.5,y:fk/si.W,d:si.date,a:ageOf(c,si.date),lab:''});
     return pts;
   }
-  if(g.metric==='fpp')return fppDaily(c,T,si);
+  if(g.metric==='fpp')return fppDaily(c,src,hs,si);
   var rotD={};src.days.forEach(function(dd){if(dd&&dd.rot&&dd.d&&hs.indexOf(dd.h)>=0)rotD[dd.d]=1;});
   if(g.metric==='drate')return drPts(c,T,rotD,!!g.cum);
   var run={cull:0,dead:0,feed:0};
@@ -2406,7 +2439,7 @@ function chgHTML(k,v,base,tag){
 function metNote(k,g){
   switch(k){
     case 'fcr':return '요구율 = 출하 사료 ÷ 출하 중량(정산 탭에 출하일·중량을 넣은 입식만)';
-    case 'fpp':return '마리당 사료(kg) = 하루하루 누적, 괄호는 그날 하루치(입고량을 다음 입고 전날까지 나눔)';
+    case 'fpp':return '마리당 사료(kg) = 하루하루 누적, 괄호는 그날 하루치. 동마다 (입고량 + 입고 때 남은 재고 − 다음 입고 때 남은 재고) ÷ 그 사이 날수로 계산해 합침. 다음 입고가 아직 없으면 앞 구간 추세로 \'예상\'';
     case 'drate':return '폐사율 = 폐사 ÷ 서류 입식 마릿수(서비스 2% 제외)'+(g.cum?' 누계':' 일별');
     case 'fdm':return '급이시간 = 급이기가 돈 시간(여러 동이면 동 평균)';
     case 'wpp':return '마리당 급수(mL) = 하루 급수량 ÷ 그날 아침 마릿수';
