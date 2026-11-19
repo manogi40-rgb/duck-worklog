@@ -486,6 +486,8 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .evc details{margin-top:8px}
 .evc summary{cursor:pointer;color:var(--accent);font-weight:700;min-height:40px;display:flex;align-items:center}
 .evnone{color:var(--muted);font-size:14px}
+.dpick{position:relative;flex:1 1 0;min-width:0;height:50px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-weight:600;font-size:21px;white-space:nowrap;overflow:hidden;cursor:pointer}
+.datebar .dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
 .gdet{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;background:rgba(255,255,255,.02)}
 .gdet summary{cursor:pointer;min-height:46px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-weight:700;color:var(--ink)}
 .gdet[open] summary{margin-bottom:4px}
@@ -1062,12 +1064,14 @@ function feedSave(h){
   if(!left){$('fqIn').value='';document.querySelectorAll('.frem').forEach(function(x){x.value='';});$('fdet').hidden=true;}
   else feedSumRefresh();
 }
+/* 날짜 칸 표시: 26.11.19 (목) — 폰 기본 날짜칸은 연도가 길어 잘려서 직접 그린다 */
+function shortDate(d){if(!/^\d{4}-\d{2}-\d{2}$/.test(d||''))return '';return d.slice(2).replace(/-/g,'.')+' ('+['목','금','토','일','월','화','수'][((dayNum(d)%7)+7)%7]+')';}
 function renderInput(){
   var key=S.cid+'|'+S.date;
   if(S.inKey!==key||!$('houses')){
     $('pane-input').innerHTML=
       '<div class="datebar"><button type="button" class="btn" data-act="prev" aria-label="전날">‹</button>'+
-      '<input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+maxDateOf(cyc())+'" aria-label="날짜">'+
+      '<label class="dpick"><span id="dateTxt">'+shortDate(S.date)+'</span><input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+maxDateOf(cyc())+'" aria-label="날짜"></label>'+
       '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
       '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+todoShell()+
       '<div class="sumline" id="sumline"></div>'+feedCardHTML()+
@@ -1135,6 +1139,7 @@ function refreshInput(){
     '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+
     '<span>사료 누계 '+FT.map(function(f){return f.label+' <b>'+fmtN(CUMT[f.k])+'</b>';}).join(' · ')+(CUMT.none?' · 미지정 <b>'+fmtN(CUMT.none)+'</b>':'')+' · 총 <b>'+fmtN(CUMT.crumble+CUMT.early+CUMT.late+CUMT.none)+'</b> kg</span>'+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
+  var dt=$('dateTxt');if(dt)dt.textContent=shortDate(S.date);
   fexSync();renderEnv();
 }
 
@@ -2906,6 +2911,7 @@ function bind(){
   $('cycBtn').addEventListener('click',function(){goHome(false);});
 
   document.addEventListener('click',function(e){
+    if(e.target.id==='dateIn'){try{if(e.target.showPicker)e.target.showPicker();}catch(x){}}
     var a=e.target.closest('[data-act]');
     if(a){
       var act=a.dataset.act;
