@@ -492,7 +492,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
 .evnone{color:var(--muted);font-size:14px}
 .gsvg text.gval{font-size:13px;font-weight:700;paint-order:stroke;stroke:var(--bg);stroke-width:4px;stroke-linejoin:round;font-family:var(--font-display)}
 .dpick{position:relative;flex:1 1 0;min-width:0;height:50px;display:flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:12px;background:var(--bg);color:var(--ink);font-family:var(--font-display);font-weight:600;font-size:21px;white-space:nowrap;overflow:hidden;cursor:pointer}
-.datebar .dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
+.dpick input[type=date]{position:absolute;inset:0;width:100%;height:100%;margin:0;padding:0;border:0;opacity:0;cursor:pointer}
 .gdet{border:1px solid var(--line);border-radius:14px;padding:4px 12px 10px;background:rgba(255,255,255,.02)}
 .gdet summary{cursor:pointer;min-height:46px;display:flex;align-items:center;flex-wrap:wrap;gap:4px;font-weight:700;color:var(--ink)}
 .gdet[open] summary{margin-bottom:4px}
@@ -592,12 +592,12 @@ function mean(a){return a.length?a.reduce(function(x,y){return x+y;},0)/a.length
 function todayStr(){return new Date().toLocaleDateString('sv-SE',{timeZone:'Asia/Seoul'});}
 function dayNum(s){var p=s.split('-').map(Number);return Math.round(Date.UTC(p[0],p[1]-1,p[2])/86400000);}
 function addDays(s,n){return new Date((dayNum(s)+n)*86400000).toISOString().slice(0,10);}
-function dot(s){return s.replace(/-/g,'.');}
+function dot(s){return String(s==null?'':s).replace(/^\d{2}(?=\d{2}-\d{2}-\d{2}$)/,'').replace(/-/g,'.');}
 function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v17';
+var VER='v18';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -674,7 +674,7 @@ function subscribeCycle(cid){
     if(cid!==S.cid)return;
     if(!sn.exists&&sn.metadata&&sn.metadata.fromCache)return;
     S.settle=sn.exists?Object.assign({},sn.data()):null;
-    if(S.tab==='settle')refreshSettle();else if(S.tab==='avg')renderAvg();else if(S.tab==='home')refreshAutoBk();
+    if(S.tab==='settle')refreshSettle();else if(S.tab==='avg')renderAvg();else if(S.tab==='home')refreshAutoBk();else if(S.tab==='input'){var cx9=cyc();if(cx9&&S.date>inMaxDate(cx9))render();}
   };
   var gotS=false;
   if(isOwner()){S.unsubs.push(S.db.doc('settle/'+cid).onSnapshot(function(sn){if(sn.exists||!(sn.metadata&&sn.metadata.fromCache))gotS=true;onS(sn);},onErr));}
@@ -798,7 +798,7 @@ function renderHeader(){
 function render(){
   if(!isOwner()&&(S.tab==='home'||S.tab==='settle'))S.tab='input';
   if(S.tab==='sensor')S.tab='input';
-  var cc0=cyc();if(cc0&&S.date>maxDateOf(cc0))S.date=maxDateOf(cc0);
+  var cc0=cyc();if(cc0&&S.date>inMaxDate(cc0))S.date=inMaxDate(cc0);
   renderHeader();
   ['home','input','log','avg','graph','settle'].forEach(function(t){$('pane-'+t).hidden=S.tab!==t;});
   document.querySelectorAll('.tab').forEach(function(b){b.setAttribute('aria-selected',b.dataset.tab===S.tab?'true':'false');b.hidden=!isOwner()&&(b.dataset.tab==='home'||b.dataset.tab==='settle');});
@@ -1076,7 +1076,7 @@ function renderInput(){
   if(S.inKey!==key||!$('houses')){
     $('pane-input').innerHTML=
       '<div class="datebar"><button type="button" class="btn" data-act="prev" aria-label="전날">‹</button>'+
-      '<label class="dpick"><span id="dateTxt">'+shortDate(S.date)+'</span><input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+maxDateOf(cyc())+'" aria-label="날짜"></label>'+
+      '<label class="dpick"><span id="dateTxt">'+shortDate(S.date)+'</span><input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+inMaxDate(cyc())+'" aria-label="날짜"></label>'+
       '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
       '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+todoShell()+
       '<div class="sumline" id="sumline"></div>'+feedCardHTML()+
@@ -1361,7 +1361,9 @@ function nrow(label,id,unit){
   return '<label class="sd-row"><span>'+label+'<span class="s">'+unit+'</span></span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" id="'+id+'" placeholder="0" aria-label="'+label+'"></label>';
 }
 function readNMonths(){var o={};document.querySelectorAll('#nMon [data-nm]').forEach(function(e){o[e.dataset.nm]=e.value;});return o;}
+function nDateTxt(){var t=$('nDateTxt'),d=$('nDate');if(t&&d)t.textContent=d.value?shortDate(d.value):'날짜 선택';}
 function renderNMonths(){
+  nDateTxt();
   var tb=$('nMon'),dt=$('nDate');if(!tb||!dt)return;
   var cur=readNMonths(),d=dt.value;
   if(!/^\d{4}-\d{2}-\d{2}$/.test(d)){tb.innerHTML='';return;}
@@ -1463,7 +1465,7 @@ function renderHome(){
       '<input type="file" id="restoreFile" accept=".json,application/json" hidden></div>'+
       '<div class="cyc-list" id="cycList"></div></section><div id="bkBox"></div><section class="card" id="autoBk" hidden></section>'+
       '<section class="card" id="homeForm"><button type="button" class="foldhead" data-act="form-toggle" aria-expanded="false"><h2 id="formTitle">'+IC('duck')+'새 입식 등록</h2><span class="caret" aria-hidden="true">▾</span></button><div id="formBody" class="foldbody" hidden>'+
-      '<div class="frow"><label class="nfield">입식일<input type="date" id="nDate"></label>'+
+      '<div class="frow"><label class="nfield">입식일<span class="dpick" style="height:46px;font-size:17px;flex:none;width:100%"><span id="nDateTxt">–</span><input type="date" id="nDate"></span></label>'+
       '<label class="nfield">총 마릿수<input type="text" id="nTotal" inputmode="numeric" autocomplete="off" placeholder="예: 25000"></label></div>'+
       '<label class="nfield">비고(메모)<textarea class="nnote" id="nNote" maxlength="500" placeholder="예: 입식 업체, 사료 회사, 특이사항"></textarea></label>'+
       '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
@@ -1534,7 +1536,7 @@ function cancelEdit(){
   $('nSave').innerHTML=EM('➕')+'입식 등록';$('nCancel').hidden=true;
   $('nHint').textContent='동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.';
   S.termsReady=false;
-  $('nDate').value=todayStr();$('nTotal').value='';$('nNote').value='';$('nErr').hidden=true;updatePrev();clearTerms();S.prefilled=false;if(S.db&&S.ready){S.prefilled=true;prefillTerms();}
+  $('nDate').value=todayStr();nDateTxt();$('nTotal').value='';$('nNote').value='';$('nErr').hidden=true;updatePrev();clearTerms();S.prefilled=false;if(S.db&&S.ready){S.prefilled=true;prefillTerms();}
 }
 function startEdit(cid){
   var c=cycleById(cid);if(!c||!$('homeForm'))return;
@@ -1542,7 +1544,7 @@ function startEdit(cid){
   $('formTitle').innerHTML=IC('duck')+'입식 수정 · '+dot(c.stockDate);
   $('nSave').innerHTML=EM('💾')+'수정 저장';$('nCancel').hidden=false;
   $('nHint').textContent='총 마릿수를 바꾸면 동별 마릿수가 다시 계산됩니다. 이미 입력한 도태·폐사·사료·온도 기록은 그대로 유지됩니다.';
-  $('nDate').value=c.stockDate;$('nTotal').value=String(c.total);$('nNote').value=c.note||'';$('nErr').hidden=true;updatePrev();
+  $('nDate').value=c.stockDate;nDateTxt();$('nTotal').value=String(c.total);$('nNote').value=c.note||'';$('nErr').hidden=true;updatePrev();
   S.termsReady=false;clearTerms();renderNMonths();
   if(isOwner())S.db.doc('settle/'+cid).get().then(function(sn){
     if(S.editId!==cid)return;
@@ -1749,6 +1751,14 @@ async function doRestore(){
 /* ---------- 정산 ---------- */
 var MAXAGE=49;
 function maxDateOf(c){return addDays(c.stockDate,MAXAGE-1);}
+/* 출하 마릿수가 들어 있고 출하일이 있으면 입력 탭 날짜는 출하일을 넘지 못하게(=출하일에 고정) 한다 */
+function inShipDate(c){
+  if(!c||!S.settle||c.id!==S.cid)return null;
+  var sh=shipFrom(S.settle);
+  if(!sh||!sh.date||!(sh.heads>0)||sh.date<c.stockDate)return null;
+  var mx=maxDateOf(c);return sh.date>mx?mx:sh.date;
+}
+function inMaxDate(c){return inShipDate(c)||maxDateOf(c);}
 function overAge(){var c=cyc();return !!(c&&ageOf(c,S.date)>MAXAGE);}
 function nz(v){return isNum(v)?v:0;}
 function numOrNull(v){var r=String(v==null?'':v).trim().replace(/,/g,'');if(r==='')return null;var n=Number(r);return isFinite(n)?n:NaN;}
@@ -2037,7 +2047,7 @@ function settleFormHTML(c){
   return '<div id="sdForm" class="pane" style="gap:14px">'+
     '<section class="card"><h2>'+IC('truck')+'출하 정보</h2>'+
     '<p class="hint">출하 후 실제 결과를 넣으세요. 입식 마릿수는 입식 탭에 등록한 값(서류 기준)을 사용합니다.</p>'+
-    '<label class="sd-row"><span>출하일<span class="s">여러 날이면 마지막 날</span></span><input class="sfld" type="date" data-sk="ship.date" aria-label="출하일" style="text-align:left"></label>'+
+    '<label class="sd-row"><span>출하일<span class="s">여러 날이면 마지막 날</span></span><span class="dpick" style="flex:0 0 170px;height:46px;font-size:17px"><span id="shipTxt">–</span><input class="sfld" type="date" data-sk="ship.date" aria-label="출하일"></span></label>'+
     mf('출하 마릿수','ship.heads','마리 · 실제','0')+
     '<div class="memo-label" style="margin:4px 0 0">출하 중량 (생체 운반 차량별)</div>'+veh+
     '<div class="cyc-btns"><button type="button" class="btn" data-act="sv-add">'+EM('🚚')+'차량 추가</button></div>'+
@@ -2072,7 +2082,7 @@ function refreshSettle(){
   if(!$('sdForm')||S.stKey!==stKeyOf(c)){renderSettle();return;}
   var d=sdoc(),sh=d.ship||{},tm=d.terms||{},ws=Array.isArray(sh.weights)?sh.weights:[],etc=Array.isArray(d.etc)?d.etc:[];
   var q=function(k){return document.querySelector('#sdForm [data-sk="'+k+'"]');};
-  setSf(q('ship.date'),sh.date||'');setSf(q('ship.heads'),sh.heads);
+  setSf(q('ship.date'),sh.date||'');var stx=$('shipTxt');if(stx)stx.textContent=sh.date?shortDate(sh.date):'날짜 선택';setSf(q('ship.heads'),sh.heads);
   ws.forEach(function(w,i){setSf(q('w:'+i),w);});
   ['live','chick','feed','feedLate','eco','otherSub'].forEach(function(k){setSf(q('terms.'+k),tm[k]);});
   for(var n=1;n<=12;n++){setSf(q('sub:fuel:'+n),subv('fuel',n));setSf(q('sub:litter:'+n),subv('litter',n));}
@@ -3132,8 +3142,8 @@ function bind(){
       if(act==='restore-go'){doRestore();return;}
       if(act==='restore-cancel'){S.restore=null;$('bkBox').innerHTML='';return;}
       if(act==='prev'){S.date=addDays(S.date,-1);render();return;}
-      if(act==='next'){S.date=addDays(S.date,1);render();return;}
-      if(act==='today'){S.date=todayStr();render();return;}
+      if(act==='next'){var nx=addDays(S.date,1),c9=cyc();if(c9&&nx>inMaxDate(c9)){toast(inShipDate(c9)?'출하일('+dot(inShipDate(c9))+')까지만 입력합니다':'입력 가능한 날짜가 끝났습니다');return;}S.date=nx;render();return;}
+      if(act==='today'){var c8=cyc(),t8=todayStr();S.date=(c8&&t8>inMaxDate(c8))?inMaxDate(c8):t8;render();return;}
     }
     var jp=e.target.closest('[data-jump]');
     if(jp){var hc=document.querySelector('.house[data-h="'+jp.dataset.jump+'"]');if(hc)hc.scrollIntoView({block:'start',behavior:'smooth'});return;}
