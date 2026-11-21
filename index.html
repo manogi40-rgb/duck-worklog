@@ -82,7 +82,15 @@ button,input,textarea{font:inherit;color:inherit}
 .tdempty{color:var(--muted);font-size:13px}
 .rotd{fill:var(--surface);stroke-width:2.5;pointer-events:none}
 .tdhist[hidden]{display:none}
-.tdbar{display:flex;justify-content:flex-end;margin-top:6px}
+.tdsel{height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 6px;font-size:15px;font-weight:700}
+.tdtag{display:inline-block;margin-right:4px;padding:0 6px;border-radius:8px;background:var(--accent);color:var(--accent-ink);font-size:12px;font-weight:700}
+.tdbar{display:flex;justify-content:flex-end;gap:6px;margin-top:6px;align-items:center}
+.tdbar .tdsrch{flex:1;min-width:0;height:36px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 8px;font-size:14px}
+.srres{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;margin-top:6px;display:flex;flex-direction:column;gap:6px;max-height:320px;overflow:auto}
+.srres[hidden]{display:none}
+.srres .sri{display:flex;flex-direction:column;gap:2px;text-align:left;padding:6px 8px;border-radius:8px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font-size:14px}
+.srres .sri small{color:var(--muted)}
+.srres mark{background:#ffe28a;color:#000;border-radius:3px}
 .tdbar .btn{min-height:36px;font-size:14px;padding:0 12px}
 .tdhist{border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:10px;margin-top:6px;display:flex;flex-direction:column;gap:4px;max-height:320px;overflow:auto}
 .tdhist .tdi .tdt{text-decoration:line-through;color:var(--muted)}
@@ -597,7 +605,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v21';
+var VER='v22';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -766,10 +774,10 @@ function addEntry(h,t,q,inp,raw,ft){
     .catch(function(e){if(inp&&!inp.value)inp.value=raw;handleErr(e);});
 }
 var chain={},pend={},stamp={};
-function saveDayField(h,f,val){
+function saveDayField(h,f,val,dateArg){
   if(!S.db||!S.cid||!S.canWrite)return;
-  if(overAge()){toast(inShipDate(cyc())?'출하일('+dot(inShipDate(cyc()))+') 이후는 기록할 수 없습니다':'7주령(49일령)까지만 입력할 수 있습니다');return;}
-  var date=S.date,cid=S.cid,key=cid+'_'+date+'_'+h;
+  if(!dateArg&&overAge()){toast(inShipDate(cyc())?'출하일('+dot(inShipDate(cyc()))+') 이후는 기록할 수 없습니다':'7주령(49일령)까지만 입력할 수 있습니다');return;}
+  var date=dateArg||S.date,cid=S.cid,key=cid+'_'+date+'_'+h;
   var base=Object.assign({c:cid,d:date,h:h},S.days.get(key)||{},pend[key]||{});
   base[f]=val;
   pend[key]=Object.assign({},pend[key]||{});pend[key][f]=val;
@@ -827,8 +835,8 @@ var TODO_SIDES=[{k:'o2s',label:'사장 → 직원',em:'👔'},{k:'s2o',label:'�
 function todoMine(side){return isOwner()?side==='o2s':side==='s2o';}
 function todoShell(){
   return '<div class="todowrap"><div class="todobox"><section class="tdcol" data-side="all"><div class="tdlist" data-tdlist="all"></div>'+
-    '<div class="tdadd"><input class="tdin" id="tdIn_all" type="text" maxlength="200" autocomplete="off" placeholder="할 일 메모" aria-label="할 일 메모"><button type="button" class="btn" data-act="td-add" data-side="all">'+EM('➕')+'추가</button></div></section></div>'+
-    '<div class="tdbar"><button type="button" class="btn" data-act="td-hist" id="tdHistBtn">'+EM('✅')+'완료한 메모 보기</button></div><div class="tdhist" id="tdHist" hidden></div></div>';
+    '<div class="tdadd"><select class="tdsel" id="tdH" aria-label="어느 동의 일인지"><option value="0">기타</option>'+HOUSES.map(function(h){return '<option value="'+h+'">'+h+'동</option>';}).join('')+'</select><input class="tdin" id="tdIn_all" type="text" maxlength="200" autocomplete="off" placeholder="할 일 메모" aria-label="할 일 메모"><button type="button" class="btn" data-act="td-add" data-side="all">'+EM('➕')+'추가</button></div></section></div>'+
+    '<div class="tdbar"><input class="tdsrch" id="tdSrch" type="search" autocomplete="off" placeholder="🔍 할 일·비고 검색" aria-label="할 일과 비고 검색"><button type="button" class="btn" data-act="td-hist" id="tdHistBtn">'+EM('✅')+'완료한 메모 보기</button></div><div class="srres" id="srRes" hidden></div><div class="tdhist" id="tdHist" hidden></div></div>';
 }
 function tdDate(ms){var d=new Date(ms);return (d.getMonth()+1)+'.'+d.getDate();}
 function renderTodos(){
@@ -842,7 +850,7 @@ function renderTodos(){
   box.innerHTML=items.length?items.map(function(t){
     var mine=todoMine(t.side),au=t.side==='o2s'?'사장':'직원';
     return '<div class="tdi'+(t.done?' done':'')+'"><input type="checkbox" data-td="'+esc(t.id)+'"'+(t.done?' checked':'')+' aria-label="완료 체크">'+
-      '<span class="tdt">'+esc(t.text)+'<small>'+au+(t.at?' · '+tdDate(t.at):'')+(t.done&&t.doneAt?' · 완료 '+tdDate(t.doneAt):'')+'</small></span>'+
+      '<span class="tdt">'+(t.h>0?'<span class="tdtag">'+t.h+'동</span>':'')+esc(t.text)+'<small>'+au+(t.at?' · '+tdDate(t.at):'')+(t.done&&t.doneAt?' · 완료 '+tdDate(t.doneAt):'')+'</small></span>'+
       ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
   }).join(''):'<div class="tdempty">메모 없음</div>';
 }
@@ -870,14 +878,37 @@ function addTodo(side){
   var inp=$('tdIn_all');if(!inp||!S.db)return;
   var tx=inp.value.trim();if(!tx)return;
   if(!todoMine(side))return;
-  S.db.collection('todos').add({side:side,text:tx.slice(0,200),done:false,at:Date.now(),by:isOwner()?'owner':'staff'})
+  var hs=$('tdH'),hv=hs?Number(hs.value)||0:0;
+  S.db.collection('todos').add({side:side,text:tx.slice(0,200),done:false,at:Date.now(),by:isOwner()?'owner':'staff',h:hv})
     .then(function(){toast('메모를 남겼습니다');}).catch(handleErr);
   inp.value='';
+}
+/* 동별 할 일을 완료하면 그 동의 비고(완료한 날짜)에 한 줄 더한다. 되돌리면 그 줄을 뺀다 */
+function todoMemoDate(c){var t=todayStr();if(t<c.stockDate)t=c.stockDate;var mx=inMaxDate(c);return t>mx?mx:t;}
+function todoMemoLine(item){return '[할일] '+item.text;}
+function todoToMemo(item){
+  var c=cyc();if(!c||!S.db||!S.canWrite)return null;
+  var d=todoMemoDate(c),key=c.id+'_'+d+'_'+item.h,cur=(S.days.get(key)||{}).memo||'',line=todoMemoLine(item);
+  saveDayField(item.h,'memo',(cur?cur+'\n':'')+line,d);
+  toast(item.h+'동 비고에 기록했습니다');
+  return {c:c.id,d:d,h:item.h};
+}
+function todoFromMemo(item){
+  var m=item.mk;if(!m||!S.db||!S.canWrite||m.c!==S.cid)return;
+  var key=m.c+'_'+m.d+'_'+m.h,cur=String((S.days.get(key)||{}).memo||''),line=todoMemoLine(item);
+  var parts=cur.split('\n'),i=parts.indexOf(line);if(i<0)return;
+  parts.splice(i,1);saveDayField(m.h,'memo',parts.join('\n'),m.d);
 }
 function toggleTodo(id,v){
   if(!S.db)return;
   var all=(S.todos||[]).concat(S.todosDone||[]),item=all.filter(function(t){return t.id===id;})[0];
-  S.db.doc('todos/'+id).update({done:!!v,doneAt:v?Date.now():null,doneBy:isOwner()?'owner':'staff'}).catch(handleErr);
+  var upd={done:!!v,doneAt:v?Date.now():null,doneBy:isOwner()?'owner':'staff'};
+  if(item&&item.h>0){
+    if(v){
+      var mk=todoToMemo(item);if(mk){upd.mk=mk;if(item)item.mk=mk;}
+    }else if(item.mk){todoFromMemo(item);upd.mk=null;item.mk=null;}
+  }
+  S.db.doc('todos/'+id).update(upd).catch(handleErr);
   if(item){
     item.done=!!v;item.doneAt=v?Date.now():null;
     if(v){if(S.todosDone&&!S.todosDone.some(function(t){return t.id===id;}))S.todosDone.push(item);}
@@ -892,6 +923,30 @@ function delTodo(id){
   if(S.todosU)S.todosU.delete(id);if(S.todosR)S.todosR.delete(id);
   S.todosDone=(S.todosDone||[]).filter(function(t){return t.id!==id;});renderTodos();renderTdHist();
 }
+/* 검색: 할 일(미완료·최근 완료는 이미 받아 둔 것, 오래된 완료 메모는 검색할 때 한 번만 불러옴)과 현재 입식의 비고(이미 받아 둔 일별 기록) */
+function hiTxt(t,q){
+  var tx=String(t),i=tx.toLowerCase().indexOf(q);if(i<0)return esc(tx);
+  return esc(tx.slice(0,i))+'<mark>'+esc(tx.slice(i,i+q.length))+'</mark>'+esc(tx.slice(i+q.length));
+}
+function renderSearch(){
+  var box=$('srRes'),inp=$('tdSrch');if(!box||!inp)return;
+  var q=inp.value.trim().toLowerCase();
+  if(!q){box.hidden=true;box.innerHTML='';return;}
+  if(!S.todosDone&&!S.tdLoading&&!S.tdHistOpen){S.tdLoading=true;loadHist();}
+  var seen={},all=(S.todos||[]).concat(S.todosDone||[]).filter(function(t){if(seen[t.id])return false;seen[t.id]=1;return String(t.text||'').toLowerCase().indexOf(q)>=0;});
+  all.sort(function(a,b){return (b.at||0)-(a.at||0);});
+  var rows=all.slice(0,30).map(function(t){
+    return '<div class="sri"><span>'+(t.h>0?'<span class="tdtag">'+t.h+'동</span>':'')+hiTxt(t.text,q)+'</span><small>할 일 · '+(t.side==='o2s'?'사장':'직원')+(t.at?' · '+tdDate(t.at):'')+(t.done?' · 완료':' · 진행 중')+'</small></div>';
+  });
+  var c=cyc(),mem=[];
+  if(c)S.days.forEach(function(dd){if(dd&&dd.h>0&&dd.memo&&String(dd.memo).toLowerCase().indexOf(q)>=0)mem.push(dd);});
+  mem.sort(function(a,b){return String(b.d).localeCompare(String(a.d))||a.h-b.h;});
+  mem.slice(0,40).forEach(function(dd){
+    rows.push('<button type="button" class="sri" data-act="sr-go" data-d="'+esc(dd.d)+'"><span>'+hiTxt(String(dd.memo).replace(/\n/g,' / '),q)+'</span><small>비고 · '+dot(dd.d)+' · '+dd.h+'동 · '+ageOf(c,dd.d)+'일령 (누르면 그 날로 이동)</small></button>');
+  });
+  box.hidden=false;
+  box.innerHTML=rows.length?rows.join(''):'<div class="tdempty">검색 결과가 없습니다'+(S.todosDone?'':' (불러오는 중…)')+'</div>';
+}
 /* 완료한 메모 보기: 열 때만 불러와서 읽기 사용량을 아낀다 */
 function toggleHist(){
   S.tdHistOpen=!S.tdHistOpen;
@@ -900,8 +955,8 @@ function toggleHist(){
 function loadHist(){
   if(!S.db)return;
   S.db.collection('todos').where('done','==',true).get().then(function(sn){
-    S.todosDone=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o;});renderTdHist();
-  }).catch(function(e){S.todosDone=[];renderTdHist();handleErr(e);});
+    S.todosDone=sn.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o;});S.tdLoading=false;renderTdHist();renderSearch();
+  }).catch(function(e){S.todosDone=[];S.tdLoading=false;renderTdHist();handleErr(e);});
 }
 function renderTdHist(){
   var box=$('tdHist'),btn=$('tdHistBtn');if(!box)return;
@@ -911,7 +966,7 @@ function renderTdHist(){
   var list=S.todosDone.slice().sort(function(a,b){return (b.doneAt||0)-(a.doneAt||0);});
   box.innerHTML=list.length?list.map(function(t){
     var sl=t.side==='o2s'?'사장':'직원',mine=todoMine(t.side);
-    return '<div class="tdi done"><span class="tdt">'+esc(t.text)+'<small>'+sl+' · 작성 '+(t.at?tdDate(t.at):'')+' · 완료 '+(t.doneAt?tdDate(t.doneAt):'')+'</small></span>'+
+    return '<div class="tdi done"><span class="tdt">'+(t.h>0?'<span class="tdtag">'+t.h+'동</span>':'')+esc(t.text)+'<small>'+sl+' · 작성 '+(t.at?tdDate(t.at):'')+' · 완료 '+(t.doneAt?tdDate(t.doneAt):'')+'</small></span>'+
       '<button type="button" class="tdundo" data-act="td-undo" data-id="'+esc(t.id)+'">'+EM('↩️')+'되돌리기</button>'+
       ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
   }).join(''):'<div class="tdempty">완료한 메모가 없습니다</div>';
@@ -3121,6 +3176,7 @@ function bind(){
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
+      if(act==='sr-go'){S.date=a.dataset.d;render();window.scrollTo(0,0);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
       if(act==='td-hist'){toggleHist();return;}
       if(act==='td-undo'){toggleTodo(a.dataset.id,false);return;}
@@ -3287,6 +3343,7 @@ function bind(){
   });
   document.addEventListener('input',function(e){
     var t=e.target;
+    if(t&&t.id==='tdSrch'){clearTimeout(timers.srch);timers.srch=setTimeout(renderSearch,200);return;}
     if(t&&t.id==='nTotal'){updatePrev();return;}
     if(t&&(t.id==='fqIn'||(t.classList&&t.classList.contains('frem')))){feedRecalc();return;}
     if(t&&t.classList&&t.classList.contains('fal')){feedSumRefresh();return;}
