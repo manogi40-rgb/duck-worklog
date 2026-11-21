@@ -597,7 +597,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v18';
+var VER='v19';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -674,6 +674,7 @@ function subscribeCycle(cid){
     if(cid!==S.cid)return;
     if(!sn.exists&&sn.metadata&&sn.metadata.fromCache)return;
     S.settle=sn.exists?Object.assign({},sn.data()):null;
+    if(S.settle)syncShipDate(cyc(),S.settle);
     if(S.tab==='settle')refreshSettle();else if(S.tab==='avg')renderAvg();else if(S.tab==='home')refreshAutoBk();else if(S.tab==='input'){var cx9=cyc();if(cx9&&S.date>inMaxDate(cx9))render();}
   };
   var gotS=false;
@@ -758,7 +759,7 @@ function loadCycles(n){
 /* ---------- 쓰기 ---------- */
 function addEntry(h,t,q,inp,raw,ft){
   if(!S.db||!S.cid||!S.canWrite)return;
-  if(overAge()){toast('7주령(49일령)까지만 입력할 수 있습니다');if(inp&&!inp.value)inp.value=raw;return;}
+  if(overAge()){toast(inShipDate(cyc())?'출하일('+dot(inShipDate(cyc()))+') 이후는 기록할 수 없습니다':'7주령(49일령)까지만 입력할 수 있습니다');if(inp&&!inp.value)inp.value=raw;return;}
   var ent={c:S.cid,d:S.date,h:h,t:t,q:q,by:S.uid||null,at:Date.now()};if(t==='feed'&&ft)ent.ft=ft;
   S.db.collection('entries').add(ent)
     .then(function(){toast('저장됨');})
@@ -767,7 +768,7 @@ function addEntry(h,t,q,inp,raw,ft){
 var chain={},pend={},stamp={};
 function saveDayField(h,f,val){
   if(!S.db||!S.cid||!S.canWrite)return;
-  if(overAge()){toast('7주령(49일령)까지만 입력할 수 있습니다');return;}
+  if(overAge()){toast(inShipDate(cyc())?'출하일('+dot(inShipDate(cyc()))+') 이후는 기록할 수 없습니다':'7주령(49일령)까지만 입력할 수 있습니다');return;}
   var date=S.date,cid=S.cid,key=cid+'_'+date+'_'+h;
   var base=Object.assign({c:cid,d:date,h:h},S.days.get(key)||{},pend[key]||{});
   base[f]=val;
@@ -1752,14 +1753,28 @@ async function doRestore(){
 var MAXAGE=49;
 function maxDateOf(c){return addDays(c.stockDate,MAXAGE-1);}
 /* 출하 마릿수가 들어 있고 출하일이 있으면 입력 탭 날짜는 출하일을 넘지 못하게(=출하일에 고정) 한다 */
+function shipConfirmed(doc,c){
+  var sh=doc?shipFrom(doc):null;
+  return (sh&&sh.date&&sh.heads>0&&sh.date>=c.stockDate)?sh.date:null;
+}
 function inShipDate(c){
-  if(!c||!S.settle||c.id!==S.cid)return null;
-  var sh=shipFrom(S.settle);
-  if(!sh||!sh.date||!(sh.heads>0)||sh.date<c.stockDate)return null;
-  var mx=maxDateOf(c);return sh.date>mx?mx:sh.date;
+  if(!c)return null;
+  var d=null;
+  if(c.id===S.cid&&S.settle)d=shipConfirmed(S.settle,c);   /* 사장님: 정산 문서가 가장 정확 */
+  else if(/^\d{4}-\d{2}-\d{2}$/.test(c.shipDate||'')&&c.shipDate>=c.stockDate)d=c.shipDate;  /* 직원: 입식 문서에 적어 둔 출하일 */
+  if(!d)return null;
+  var mx=maxDateOf(c);return d>mx?mx:d;
+}
+/* 출하가 확정되면 직원 화면도 알 수 있게 입식 문서에 출하일을 적어 둔다(직원은 정산 문서를 읽지 않음) */
+function syncShipDate(c,doc){
+  if(!c||!S.db||!S.canWrite||!isOwner())return;
+  var want=shipConfirmed(doc,c);
+  if((c.shipDate||null)===want)return;
+  c.shipDate=want;
+  S.db.doc('cycles/'+c.id).update({shipDate:want}).catch(function(e){delete c.shipDate;handleErr(e);});
 }
 function inMaxDate(c){return inShipDate(c)||maxDateOf(c);}
-function overAge(){var c=cyc();return !!(c&&ageOf(c,S.date)>MAXAGE);}
+function overAge(){var c=cyc();return !!(c&&(ageOf(c,S.date)>MAXAGE||S.date>inMaxDate(c)));}
 function nz(v){return isNum(v)?v:0;}
 function numOrNull(v){var r=String(v==null?'':v).trim().replace(/,/g,'');if(r==='')return null;var n=Number(r);return isFinite(n)?n:NaN;}
 function won(x){return fmt(Math.round(x))+'원';}
@@ -1868,7 +1883,7 @@ function shipReady(d){
 function saveSettle(fn){
   if(!S.db||!S.cid||!S.canWrite)return;
   var cid=S.cid,doc=JSON.parse(JSON.stringify(S.settle||{}));doc.c=cid;
-  fn(doc);S.settle=doc;
+  fn(doc);S.settle=doc;syncShipDate(cyc(),doc);
   var c0=cyc(),mk=false;
   if(c0&&c0.id===cid&&!doc.shipBackedUp&&S.sync.e&&S.sync.d&&shipReady(doc)){doc.shipBackedUp=Date.now();mk=true;}
   settleChain=settleChain.then(function(){
