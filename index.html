@@ -597,7 +597,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v19';
+var VER='v20';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -2164,7 +2164,7 @@ function refreshSettle(){
 function renderSettle(){
   var pane=$('pane-settle'),c=cyc();
   if(!S.ready||!c){pane.innerHTML=emptyHTML(!S.ready);S.stKey=null;return;}
-  pane.innerHTML='<h2 style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">'+IC('settle')+'정산 · '+dot(c.stockDate)+' 입식</h2>'+settleFormHTML(c);
+  pane.innerHTML='<h2 style="margin:0;font-family:var(--font-display);font-weight:400;font-size:22px">'+IC('settle')+'정산 · '+dot(c.stockDate)+' 입식</h2>'+settleFormHTML(c)+'<p class="hint" id="verTag" style="text-align:center;margin:6px 0 0">앱 버전 '+VER+'</p>';
   S.stKey=stKeyOf(c);
   refreshSettle();
 }
