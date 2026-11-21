@@ -605,7 +605,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v22';
+var VER='v23';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -773,12 +773,12 @@ function addEntry(h,t,q,inp,raw,ft){
     .then(function(){toast('저장됨');})
     .catch(function(e){if(inp&&!inp.value)inp.value=raw;handleErr(e);});
 }
-var chain={},pend={},stamp={};
-function saveDayField(h,f,val,dateArg){
+var chain={},pend={},stamp={},dayCur={};
+function saveDayField(h,f,val,dateArg,cidArg){
   if(!S.db||!S.cid||!S.canWrite)return;
   if(!dateArg&&overAge()){toast(inShipDate(cyc())?'출하일('+dot(inShipDate(cyc()))+') 이후는 기록할 수 없습니다':'7주령(49일령)까지만 입력할 수 있습니다');return;}
-  var date=dateArg||S.date,cid=S.cid,key=cid+'_'+date+'_'+h;
-  var base=Object.assign({c:cid,d:date,h:h},S.days.get(key)||{},pend[key]||{});
+  var date=dateArg||S.date,cid=cidArg||S.cid,key=cid+'_'+date+'_'+h;
+  var base=Object.assign({c:cid,d:date,h:h},(cid===S.cid?S.days.get(key):null)||{},pend[key]||{},cidArg&&cidArg!==S.cid&&dayCur[key]?{memo:dayCur[key]}:{});
   base[f]=val;
   pend[key]=Object.assign({},pend[key]||{});pend[key][f]=val;
   var n=(stamp[key]=(stamp[key]||0)+1);
@@ -886,27 +886,71 @@ function addTodo(side){
 /* 동별 할 일을 완료하면 그 동의 비고(완료한 날짜)에 한 줄 더한다. 되돌리면 그 줄을 뺀다 */
 function todoMemoDate(c){var t=todayStr();if(t<c.stockDate)t=c.stockDate;var mx=inMaxDate(c);return t>mx?mx:t;}
 function todoMemoLine(item){return '[할일] '+item.text;}
-function todoToMemo(item){
-  var c=cyc();if(!c||!S.db||!S.canWrite)return null;
-  var d=todoMemoDate(c),key=c.id+'_'+d+'_'+item.h,cur=(S.days.get(key)||{}).memo||'',line=todoMemoLine(item);
-  saveDayField(item.h,'memo',(cur?cur+'\n':'')+line,d);
+/* 가장 최근 입식이 아직 사육 중인지: 아니면(출하 후·입식 전 빈 기간) 다음 입식 첫날로 넘긴다 */
+function latestCycle(){return S.cycles&&S.cycles.length?S.cycles[0]:null;}
+function cycShipDay(c){
+  var sm=(S.shipMap||{})[c.id];
+  if(sm&&sm.ready&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||''))return sm.date;
+  return /^\d{4}-\d{2}-\d{2}$/.test(c.shipDate||'')?c.shipDate:null;
+}
+function inGap(c){
+  if(!c)return true;
+  var t=todayStr(),sd=cycShipDay(c);
+  if(sd&&t>sd)return true;
+  return t>maxDateOf(c);
+}
+async function todoToMemo(item){
+  var L=latestCycle();
+  if(!S.db||!S.canWrite)return null;
+  if(inGap(L))return {pend:true};   /* 다음 입식을 등록할 때 첫날로 넘어감 */
+  var d=todoMemoDate(L),key=L.id+'_'+d+'_'+item.h,cur='';
+  if(L.id===S.cid)cur=(S.days.get(key)||{}).memo||'';
+  else{try{var sn=await S.db.doc('days/'+key).get();cur=sn.exists?(sn.data().memo||''):'';}catch(e){return null;}}
+  var nv=(cur?cur+'\n':'')+todoMemoLine(item);
+  if(L.id!==S.cid)dayCur[key]=nv;
+  saveDayField(item.h,'memo',nv,d,L.id);
   toast(item.h+'동 비고에 기록했습니다');
-  return {c:c.id,d:d,h:item.h};
+  return {c:L.id,d:d,h:item.h};
+}
+/* 새 입식을 등록하면, 빈 기간에 완료한 할 일을 입식 첫날 비고(동별) 또는 입식 메모(기타)로 옮긴다 */
+async function flushPendTodos(cid,date,note){
+  var sn=await S.db.collection('todos').where('pend','==',true).get();
+  if(sn.empty)return;
+  var byH={},other=[],ids=[];
+  sn.docs.forEach(function(d){
+    var t=d.data(),ln='[할일 '+(t.doneAt?tdDate(t.doneAt):'')+' 완료] '+t.text;
+    if(t.h>0){(byH[t.h]=byH[t.h]||[]).push(ln);}else other.push(ln);
+    ids.push([d.id,t.h>0?t.h:0]);
+  });
+  var hs=Object.keys(byH);
+  await Promise.all(hs.map(function(h){
+    return S.db.doc('days/'+cid+'_'+date+'_'+h).set({c:cid,d:date,h:Number(h),memo:byH[h].join('\n')},{merge:true}).catch(function(){return S.db.doc('days/'+cid+'_'+date+'_'+h).set({c:cid,d:date,h:Number(h),memo:byH[h].join('\n')});});
+  }));
+  if(other.length)await S.db.doc('cycles/'+cid).update({note:(note?note+'\n':'')+other.join('\n')});
+  await Promise.all(ids.map(function(x){return S.db.doc('todos/'+x[0]).update({pend:false,mk:{c:cid,d:date,h:x[1]}});}));
+  toast('빈 기간에 완료한 할 일 '+ids.length+'건을 입식 첫날로 옮겼습니다');
 }
 function todoFromMemo(item){
   var m=item.mk;if(!m||!S.db||!S.canWrite||m.c!==S.cid)return;
-  var key=m.c+'_'+m.d+'_'+m.h,cur=String((S.days.get(key)||{}).memo||''),line=todoMemoLine(item);
+  if(!(m.h>0))return;var key=m.c+'_'+m.d+'_'+m.h,cur=String((S.days.get(key)||{}).memo||''),line=todoMemoLine(item);
   var parts=cur.split('\n'),i=parts.indexOf(line);if(i<0)return;
   parts.splice(i,1);saveDayField(m.h,'memo',parts.join('\n'),m.d);
 }
-function toggleTodo(id,v){
+async function toggleTodo(id,v){
   if(!S.db)return;
   var all=(S.todos||[]).concat(S.todosDone||[]),item=all.filter(function(t){return t.id===id;})[0];
   var upd={done:!!v,doneAt:v?Date.now():null,doneBy:isOwner()?'owner':'staff'};
-  if(item&&item.h>0){
+  if(item){
     if(v){
-      var mk=todoToMemo(item);if(mk){upd.mk=mk;if(item)item.mk=mk;}
-    }else if(item.mk){todoFromMemo(item);upd.mk=null;item.mk=null;}
+      if(item.h>0||inGap(latestCycle())){
+        if(item.h>0||true){var mk=(item.h>0||inGap(latestCycle()))?await todoToMemo(item):null;
+          if(mk&&mk.pend){upd.pend=true;upd.mk=null;item.pend=true;toast('사육 중인 입식이 없어 다음 입식 첫날에 기록됩니다');}
+          else if(mk){upd.mk=mk;item.mk=mk;}}
+      }
+    }else{
+      if(item.mk){todoFromMemo(item);upd.mk=null;item.mk=null;}
+      if(item.pend){upd.pend=false;item.pend=false;}
+    }
   }
   S.db.doc('todos/'+id).update(upd).catch(handleErr);
   if(item){
@@ -940,6 +984,7 @@ function renderSearch(){
   });
   var c=cyc(),mem=[];
   if(c)S.days.forEach(function(dd){if(dd&&dd.h>0&&dd.memo&&String(dd.memo).toLowerCase().indexOf(q)>=0)mem.push(dd);});
+  if(c&&c.note&&String(c.note).toLowerCase().indexOf(q)>=0)rows.push('<div class="sri"><span>'+hiTxt(String(c.note).replace(/\n/g,' / '),q)+'</span><small>기타 · 입식 메모('+dot(c.stockDate)+' 입식)</small></div>');
   mem.sort(function(a,b){return String(b.d).localeCompare(String(a.d))||a.h-b.h;});
   mem.slice(0,40).forEach(function(dd){
     rows.push('<button type="button" class="sri" data-act="sr-go" data-d="'+esc(dd.d)+'"><span>'+hiTxt(String(dd.memo).replace(/\n/g,' / '),q)+'</span><small>비고 · '+dot(dd.d)+' · '+dd.h+'동 · '+ageOf(c,dd.d)+'일령 (누르면 그 날로 이동)</small></button>');
@@ -1643,7 +1688,8 @@ function saveCycle(){
           S.db.doc('settings/defaults').set(dd).catch(function(){});
         }
       })
-      .then(function(){return isOwner()&&Object.keys(tr.terms).length?S.db.doc('settle/'+id).set({c:id,terms:tr.terms}):null;});
+      .then(function(){return isOwner()&&Object.keys(tr.terms).length?S.db.doc('settle/'+id).set({c:id,terms:tr.terms}):null;})
+      .then(function(){return flushPendTodos(id,date,note).catch(function(){});});
   })
     .then(function(){
       idxAdd(id);S.ready=true;
