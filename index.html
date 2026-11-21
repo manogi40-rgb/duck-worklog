@@ -597,7 +597,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v20';
+var VER='v21';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -1141,9 +1141,9 @@ function refreshInput(){
     }).join('');
   });
   var cnt='';
-  $('sumline').innerHTML='<span class="hint">입력은 '+MAXAGE+'일령(7주령, '+dot(maxDateOf(c))+')까지</span><span>전체 '+dot(S.date)+' 기준 <b>'+fmt(nowAll)+'</b>수 / 입식 '+fmt(initAll)+'수</span>'+
+  $('sumline').innerHTML='<span>전체 '+dot(S.date)+' 기준 <b>'+fmt(nowAll)+'</b>수 / 입식 '+fmt(initAll)+'수</span>'+
     '<span>오늘 도태 <b>'+fmtN(tdC)+'</b></span><span>폐사 <b>'+fmtN(tdD)+'</b></span><span>사료 <b>'+fmtN(tdF)+'</b> kg</span>'+
-    '<span>사료 누계 '+FT.map(function(f){return f.label+' <b>'+fmtN(CUMT[f.k])+'</b>';}).join(' · ')+(CUMT.none?' · 미지정 <b>'+fmtN(CUMT.none)+'</b>':'')+' · 총 <b>'+fmtN(CUMT.crumble+CUMT.early+CUMT.late+CUMT.none)+'</b> kg</span>'+cnt;
+    ''+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
   var dt=$('dateTxt');if(dt)dt.textContent=shortDate(S.date);
   fexSync();renderEnv();
