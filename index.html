@@ -610,7 +610,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v27';
+var VER='v28';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -3041,7 +3041,7 @@ function effUnits(cm){
   return out;
 }
 function effCalc(units){
-  var R={};EVT.forEach(function(e){R[e.k]={n:0,grp:{},m:{}};EFM.forEach(function(f){R[e.k].m[f.k]=[[],[],[]];});});
+  var R={};EVT.forEach(function(e){R[e.k]={n:0,grp:{},m:{},ev:[]};EFM.forEach(function(f){R[e.k].m[f.k]=[[],[],[]];});});
   units.forEach(function(u){
     var by=u.by,ks=Object.keys(by).sort();if(!ks.length)return;
     var n0=dayNum(ks[0]),n1=dayNum(ks[ks.length-1]);
@@ -3071,9 +3071,9 @@ function effCalc(units){
       EVT.forEach(function(e){
         if(!test(e.k,n)||(e.run&&test(e.k,n-1)))return;
         var r=R[e.k],gp=r.grp[u.grp]||(r.grp[u.grp]={name:u.gname,color:u.color,n:0,m:{}});
-        r.n++;gp.n++;
+        r.n++;gp.n++;var evr={d:isoDay(n),g:u.gname,c:u.color,v:{}};r.ev.push(evr);
         EFM.forEach(function(f){
-          [-1,0,1].forEach(function(off,i){var b=expect(n,f.k,off);if(b==null)return;var o=chgOf(f.k,val(n+off,f.k),b);if(o){r.m[f.k][i].push(o.d);if(off===0)(gp.m[f.k]=gp.m[f.k]||[]).push(o.d);}});
+          [-1,0,1].forEach(function(off,i){var b=expect(n,f.k,off);if(b==null)return;var o=chgOf(f.k,val(n+off,f.k),b);if(o){r.m[f.k][i].push(o.d);if(off===0){(gp.m[f.k]=gp.m[f.k]||[]).push(o.d);evr.v[f.k]=o.d;}}});
         });
       });
     }
@@ -3101,6 +3101,16 @@ function effSentence(ek,r){
   if(ek==='cold'||ek==='hot'){var t=r.m.tmin[1];if(t.length)bits.unshift(sp('tmin',mean(t)));}
   return (pre.length?'전날부터 '+pre.join(', ')+' → ':'')+(bits.length?'당일 '+bits.join(', '):'당일 눈에 띄는 변화 없음')+(rec?' · 다음날 거의 회복':'');
 }
+/* 각 번(날짜)별 당일 변화: 이미 받아 둔 기록에서 계산한 값만 펼쳐 보여 준다 */
+function evListHTML(r,cm){
+  if(!r.ev||!r.ev.length)return '';
+  var L=r.ev.slice().sort(function(a,b){return a.d<b.d?1:a.d>b.d?-1:0;}),more=L.length>40;L=L.slice(0,40);
+  var rows=L.map(function(x){
+    return '<tr><td>'+dot(x.d)+'</td><td><span class="sw6" style="background:'+x.c+'"></span>'+esc(String(x.g).split(' · ')[0])+'</td>'+
+      EFM.map(function(f){return effCell(f.k,x.v[f.k]==null?null:[x.v[f.k]],'td');}).join('')+'</tr>';
+  }).join('');
+  return '<details><summary>날짜별로 보기 ('+r.ev.length+'번)</summary><div class="scroll"><table class="evt"><thead><tr><th>날짜</th><th>'+(cm?'파트':'동')+'</th>'+EFM.map(function(f){return '<th>'+f.em+' '+f.sh+'</th>';}).join('')+'</tr></thead><tbody>'+rows+'</tbody></table></div>'+(more?'<p class="hint">최근 40번만 보여 줍니다.</p>':'')+'</details>';
+}
 function effectHTML(cm){
   var g=S.g,units=effUnits(cm);
   var head='<h2>'+EM('🔍')+'변화 찾기</h2><p class="hint" style="margin:0">'+(cm?'고른 '+g.sel.length+'개 파트 · '+(g.scope==='all'?'전체 동':g.scope+'동'):'이 입식 · 위에서 켜 둔 동')+
@@ -3116,6 +3126,7 @@ function effectHTML(cm){
       '<table class="evt"><thead><tr><th>평소와 비교</th><th>전날</th><th class="now">당일</th><th>다음날</th></tr></thead><tbody>'+
       EFM.map(function(f){return '<tr><td>'+f.em+' '+f.lab+'</td>'+[0,1,2].map(function(i){return effCell(f.k,r.m[f.k][i],'td');}).join('')+'</tr>';}).join('')+
       '</tbody></table>'+
+      evListHTML(r,cm)+
       (gk.length>1?'<details><summary>'+(cm?'파트별로':'동별로')+' 나눠 보기 (당일)</summary><div class="scroll"><table class="evt"><thead><tr><th></th><th>⏱️ 급이</th><th>🚰 급수</th><th>☠️ 폐사</th><th>횟수</th></tr></thead><tbody>'+
         gk.map(function(k){var gp=r.grp[k];return '<tr><td><span class="sw6" style="background:'+gp.color+'"></span>'+esc(gp.name)+'</td>'+effCell('fdm',gp.m.fdm,'td')+effCell('wpp',gp.m.wpp,'td')+effCell('dead',gp.m.dead,'td')+'<td>'+gp.n+'</td></tr>';}).join('')+
         '</tbody></table></div></details>':'')+'</div>';
