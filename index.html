@@ -610,7 +610,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v28';
+var VER='v29';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -3022,7 +3022,7 @@ var EVT=[
   {k:'hk',em:'🌾',name:'왕겨 넣은 날'},
   {k:'cold',em:'🥶',name:'갑자기 추워진 날',desc:'최저온도가 평소보다 2℃ 이상 낮은 날',run:true},
   {k:'hot',em:'🥵',name:'갑자기 더워진 날',desc:'최고온도가 평소보다 2℃ 이상 높은 날',run:true},
-  {k:'sick',em:'🩺',name:'폐사가 갑자기 는 날',desc:'폐사가 평소의 2배 이상, 3수 이상 많은 날',run:true}
+  {k:'sick',em:'🩺',name:'폐사가 갑자기 늘어난 날',desc:'폐사가 평소의 2배 이상, 3수 이상 많은 날',run:true}
 ];
 var EFM=[{k:'fdm',lab:'급이시간',sh:'급이',em:'⏱️'},{k:'wpp',lab:'마리당 급수',sh:'급수',em:'🚰'},{k:'dead',lab:'폐사',sh:'폐사',em:'☠️'},{k:'tmin',lab:'최저온도',sh:'최저온도',em:'🌡️'}];
 function effUnits(cm){
