@@ -67,6 +67,7 @@ button,input,textarea{font:inherit;color:inherit}
 .tdt{flex:1;min-width:0;overflow-wrap:anywhere;line-height:1.4}
 .tdt small{display:block;color:var(--muted);font-size:11px}
 .tdi.done .tdt{text-decoration:line-through;color:var(--muted)}
+.tdmv{display:flex;flex-direction:column;flex:none;gap:2px}.tdmv button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:6px;width:34px;height:26px;font-size:12px;line-height:1;padding:0}.tdmv button:disabled{opacity:.3}
 .tdx{border:0;background:none;color:var(--muted);font-size:18px;line-height:1;padding:2px 4px;min-height:28px}
 .tdadd{display:flex;gap:6px}
 .tdadd input{flex:1;min-width:0;height:40px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--ink);padding:0 8px;font-size:15px}
@@ -605,7 +606,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v24';
+var VER='v25';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -839,17 +840,31 @@ function todoShell(){
     '<div class="tdbar"><input class="tdsrch" id="tdSrch" type="search" autocomplete="off" placeholder="🔍 할 일·비고 검색" aria-label="할 일과 비고 검색"><button type="button" class="btn" data-act="td-hist" id="tdHistBtn">'+EM('✅')+'완료한 메모 보기</button></div><div class="srres" id="srRes" hidden></div><div class="tdhist" id="tdHist" hidden></div></div>';
 }
 function tdDate(ms){var d=new Date(ms);return (d.getMonth()+1)+'.'+d.getDate();}
+/* 순서: 직접 정한 번호(ord)가 있으면 그 순서, 새로 쓴 메모(ord 없음)는 맨 위(최신순) */
+function tdKey(t){return typeof t.ord==='number'?t.ord:-(t.at||0);}
+function tdOpen(){return (S.todos||[]).filter(function(t){return !t.done;}).sort(function(a,b){return tdKey(a)-tdKey(b);});}
+function moveTodo(id,dir){
+  if(!S.db)return;
+  var L=tdOpen(),i=L.map(function(t){return t.id;}).indexOf(id),j=i+dir;
+  if(i<0||j<0||j>=L.length)return;
+  var t=L[i];L[i]=L[j];L[j]=t;
+  L.forEach(function(x,n){if(x.ord!==n){x.ord=n;S.db.doc('todos/'+x.id).update({ord:n}).catch(handleErr);}});
+  renderTodos();
+}
 function renderTodos(){
   var list=S.todos||[],now=Date.now();
   var box=document.querySelector('[data-tdlist="all"]');if(!box)return;
   var items=list.filter(function(t){return !t.done||(t.doneAt&&now-t.doneAt<TD_KEEP);});
   items.sort(function(a,b){
     if(!!a.done!==!!b.done)return a.done?1:-1;
-    return a.done?(b.doneAt||0)-(a.doneAt||0):(b.at||0)-(a.at||0);
+    return a.done?(b.doneAt||0)-(a.doneAt||0):tdKey(a)-tdKey(b);
   });
+  var openIds=items.filter(function(t){return !t.done;}).map(function(t){return t.id;});
   box.innerHTML=items.length?items.map(function(t){
     var mine=todoMine(t.side),au=t.side==='o2s'?'사장':'직원';
-    return '<div class="tdi'+(t.done?' done':'')+'"><input type="checkbox" data-td="'+esc(t.id)+'"'+(t.done?' checked':'')+' aria-label="완료 체크">'+
+    var oi=t.done?-1:openIds.indexOf(t.id);
+    var mv=t.done?'':'<span class="tdmv"><button type="button" data-act="td-up" data-id="'+esc(t.id)+'" aria-label="위로"'+(oi<=0?' disabled':'')+'>▲</button><button type="button" data-act="td-dn" data-id="'+esc(t.id)+'" aria-label="아래로"'+(oi>=openIds.length-1?' disabled':'')+'>▼</button></span>';
+    return '<div class="tdi'+(t.done?' done':'')+'">'+mv+'<input type="checkbox" data-td="'+esc(t.id)+'"'+(t.done?' checked':'')+' aria-label="완료 체크">'+
       '<span class="tdt">'+(t.h>0?'<span class="tdtag">'+t.h+'동</span>':'')+esc(t.text)+'<small>'+au+(t.at?' · '+tdDate(t.at):'')+(t.done&&t.doneAt?' · 완료 '+tdDate(t.doneAt):'')+'</small></span>'+
       ((mine||isOwner())?'<button type="button" class="tdx" data-act="td-del" data-id="'+esc(t.id)+'" aria-label="메모 삭제">×</button>':'')+'</div>';
   }).join(''):'<div class="tdempty">메모 없음</div>';
@@ -3221,6 +3236,7 @@ function bind(){
       if(act==='new'){cancelEdit();goHome(true);return;}
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
+      if(act==='td-up'||act==='td-dn'){moveTodo(a.dataset.id,act==='td-up'?-1:1);return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='sr-go'){S.date=a.dataset.d;render();window.scrollTo(0,0);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
