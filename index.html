@@ -8,8 +8,8 @@
 <meta name="apple-mobile-web-app-title" content="작업일지">
 <meta name="apple-mobile-web-app-status-bar-style" content="black">
 <link rel="manifest" href="manifest.webmanifest">
-<link rel="icon" href="icon-192.png">
-<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" href="icon-192.png?v=3">
+<link rel="apple-touch-icon" href="icon-192.png?v=3">
 <title>오리농장 작업일지</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;600;700&family=Oxanium:wght@500;600;700&display=swap">
 <style>
@@ -518,7 +518,7 @@ input[type=checkbox],input[type=radio]{accent-color:var(--accent)}
   <header class="top">
     <div class="titlebar">
       <button type="button" class="cyc" id="cycBtn" aria-label="입식 목록 보기">
-        <img class="logo" src="icon-192.png" alt="" onerror="this.style.display='none'">
+        <img class="logo" src="icon-192.png?v=3" alt="" onerror="this.style.display='none'">
         <span class="cyc-txt"><span class="cyc-title" id="cycTitle">작업일지</span><span class="cyc-sub" id="cycSub">낙원농장 작업일지</span></span>
       </button>
       <div class="agebox" id="cycAge" hidden></div>
@@ -610,7 +610,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v29';
+var VER='v30';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
