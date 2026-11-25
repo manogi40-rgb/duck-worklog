@@ -137,6 +137,15 @@ body.tddrag{overflow:hidden}
 .ck{display:flex;align-items:center;gap:8px;min-height:44px;font-size:16px}
 .ck input{width:24px;height:24px;margin:0}
 .hkl[hidden]{display:none}
+.mvline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;color:var(--muted);padding:8px 12px;border-radius:12px;border:1px dashed var(--line)}
+.mvline b{color:var(--ink);font-size:18px}.mvline b.ok{color:var(--good)}.mvline small{font-size:13px}
+.mvline.done{border-style:solid;border-color:rgba(69,217,138,.45);background:rgba(69,217,138,.08)}
+.mvbar h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.mvbar h2 small{font-size:13px;font-weight:400;color:var(--muted)}
+.mvchips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.mvc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;border:1px dashed var(--line);border-top:5px solid var(--hc,var(--accent));min-width:0}
+.mvc b{font-size:20px}.mvc i{font-style:normal;font-size:15px;font-weight:700;color:var(--muted)}.mvc small{font-size:12px;color:var(--muted)}
+.mvc.done{border-style:solid;border-color:rgba(69,217,138,.5);border-top-color:var(--hc,var(--accent));background:rgba(69,217,138,.08)}.mvc.done i{color:var(--good)}
+.mvact{margin-top:10px}.mvact .btn{width:100%;min-height:52px;font-size:17px;flex-wrap:wrap}.mvact .btn small{font-size:13px;opacity:.85;margin-left:6px}
 .fdt input{width:100%;height:42px;text-align:right;padding:0 6px;font-size:17px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .fdt td,.fdt th{padding:4px 3px;text-align:center}
 .feedcard .wfield{margin:8px 0}
@@ -610,7 +619,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v30';
+var VER='v31';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -658,6 +667,10 @@ function agg(){
 }
 function dayDoc(cid,d,h){return S.days.get(cid+'_'+d+'_'+h)||null;}
 function headsOf(c,h){return Number(c.heads&&c.heads[h])||0;}
+/* ---------- 분동: 입식은 1동·5동에만 받고 칸막이로 나눠 둔다(1동 안 1·2·3동 칸, 5동 안 4·5동 칸).
+   일령이 되면 각 동으로 옮기는데(분동) 하루에 몇 동을 하든 상관없다. 동별 '분동한 날' 체크(days 문서의 mv)로 기록한다. ---------- */
+var PEN={1:1,2:1,3:1,4:5,5:5};
+function mvDates(){var o={};S.days.forEach(function(dd){if(dd&&dd.mv===true&&dd.d&&dd.h>=1&&(!o[dd.h]||dd.d<o[dd.h]))o[dd.h]=dd.d;});return o;}
 /* 성적 계산 기준 = 서류 입식 마릿수(서비스 2% 제외). 전체 동이면 등록한 입식 마릿수, 일부 동이면 배분 마릿수 ÷ 1.02 */
 function docOf(c,hs){
   var init=0;hs.forEach(function(h){init+=headsOf(c,h);});
@@ -1125,7 +1138,9 @@ function cardHTML(h){
     '<div class="house-now"><b data-now>0</b>'+IC('duck',24)+'남은 수 · 입식 <span data-init>0</span></div></div>'+rows+
     '<div class="temps one">'+temps+hums+'</div>'+
     '<div class="smart" data-smart hidden></div>'+
-    '<div class="works"><label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
+    '<div class="mvline" data-mvl></div>'+
+    '<div class="works"><label class="ck mvck"><input type="checkbox" data-h="'+h+'" data-f="mv" aria-label="'+h+'동 분동한 날"><span class="em" aria-hidden="true">🚚</span>분동</label>'+
+    '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
     '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="hk" aria-label="'+h+'동 왕겨 작업"><span class="ico i-husk" aria-hidden="true"></span>왕겨</label>'+
     '<label class="hkl">kg<input class="kin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="hkg" placeholder="kg" aria-label="'+h+'동 왕겨 kg" disabled></label></div>'+
     '<div class="memo-label">'+EM('📝')+'비고</div><textarea class="memo" data-h="'+h+'" data-f="memo" aria-label="'+h+'동 비고" placeholder="오늘 특이사항"></textarea>'+
@@ -1234,7 +1249,7 @@ function renderInput(){
       '<label class="dpick"><span id="dateTxt">'+shortDate(S.date)+'</span><input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+inMaxDate(cyc())+'" aria-label="날짜"></label>'+
       '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
       '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+todoShell()+
-      '<div class="sumline" id="sumline"></div>'+feedCardHTML()+
+      '<div class="sumline" id="sumline"></div>'+'<section class="card mvbar" id="mvbar"></section>'+feedCardHTML()+
       '<div class="hjump" role="group" aria-label="동 바로가기">'+HOUSES.map(function(h){return '<button type="button" data-jump="'+h+'" style="--hc:var(--s'+h+')" aria-label="'+h+'동으로 이동"><b>'+h+'<i>동</i></b><small data-jn="'+h+'"></small></button>';}).join('')+'</div>'+
       '<div class="houses" id="houses">'+HOUSES.map(cardHTML).join('')+'</div>';
     S.inKey=key;
@@ -1254,7 +1269,7 @@ function refreshInput(){
     CUM[e.h][e.t]+=Number(e.q)||0;
     if(e.t==='feed'){var fk=ftKey(e.ft);CUMF[e.h][fk]+=Number(e.q)||0;CUMT[fk]+=Number(e.q)||0;}
   });
-  var nowAll=0,initAll=0,tdC=0,tdD=0,tdF=0;
+  var nowAll=0,initAll=0,tdC=0,tdD=0,tdF=0,MVD=mvDates();
   HOUSES.forEach(function(h){
     var card=pane.querySelector('.house[data-h="'+h+'"]');if(!card)return;
     var init=headsOf(c,h),tot=CUM[h],now=init-tot.cull-tot.dead;
@@ -1273,6 +1288,10 @@ function refreshInput(){
     ALLF.forEach(function(x){var inp=card.querySelector('[data-f="'+x.f+'"]');setVal(inp,dd[x.f]);if(inp){var lv=thv(dd,x.f);inp.placeholder=(!isNum(dd[x.f])&&lv!=null)?fmtT(lv):x.label;}});
     var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
     if(ckR)ckR.checked=dd.rot===true;
+    var ckM=card.querySelector('input[data-f="mv"]');if(ckM)ckM.checked=dd.mv===true;
+    var mvl=card.querySelector('[data-mvl]');if(mvl){var md=MVD[h];
+      var ml=(md&&S.date>=md)?'<b class="ok">분동 완료</b> '+dot(md)+' · '+ageOf(c,md)+'일령에 옮김':'<b>분동 전</b> '+PEN[h]+'동 안 '+h+'동 칸'+(md?' <small>· '+dot(md)+'('+ageOf(c,md)+'일령) 분동</small>':'');
+      mvl.innerHTML=EM('🚚')+ml;mvl.classList.toggle('done',!!(md&&S.date>=md));}
     if(ckH)ckH.checked=dd.hk===true;
     if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;var hl2=kg.closest('.hkl');if(hl2)hl2.hidden=!(dd.hk===true);}
     setVal(card.querySelector('textarea'),dd.memo);
@@ -1300,7 +1319,17 @@ function refreshInput(){
     ''+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
   var dt=$('dateTxt');if(dt)dt.textContent=shortDate(S.date);
-  fexSync();renderEnv();
+  renderMvBar(c,MVD);fexSync();renderEnv();
+}
+function renderMvBar(c,MVD){
+  var bar=$('mvbar');if(!bar)return;
+  var left=HOUSES.filter(function(h){return !MVD[h];});
+  bar.innerHTML='<h2>'+EM('🚚')+'분동 <small>1동 칸막이(1·2·3동) · 5동 칸막이(4·5동)에서 각 동으로</small></h2>'+
+    '<div class="mvchips">'+HOUSES.map(function(h){var d=MVD[h];
+      return '<span class="mvc'+(d?' done':'')+'" style="--hc:var(--s'+h+')"><b>'+h+'동</b>'+(d?'<i>'+dot(d).slice(3)+'</i><small>'+ageOf(c,d)+'일령</small>':'<i>대기</i><small>'+PEN[h]+'동 칸</small>')+'</span>';}).join('')+'</div>'+
+    (left.length?'<div class="mvact"><button type="button" class="btn p" data-act="mv-all">'+EM('🚚')+'오늘('+dot(S.date).slice(3)+') 남은 동 모두 분동 <small>'+left.map(function(h){return h+'동';}).join('·')+'</small></button></div>'
+      :'<p class="hint">모든 동의 분동이 끝났습니다.</p>')+
+    '<p class="hint">동마다 분동한 날 아래 \'분동\' 칸을 체크하면 기록됩니다. 하루에 한 동씩 하든 여러 동을 하든 날짜별로 따로 체크하세요. 잘못 눌렀으면 그 날짜에서 체크를 풀면 됩니다.</p>';
 }
 
 /* 기록 탭 */
@@ -1366,7 +1395,7 @@ function headsMap(c,entries){
 /* 하루 단위로 모은 자료(동 여러 개면 합치거나 평균): 통계·변화 찾기·집계가 같이 쓴다 */
 function dayRows(c,src,hs,HM){
   HM=HM||headsMap(c,src.entries);
-  var by={},get=function(d){return by[d]||(by[d]={dead:0,cull:0,feed:0,wat:null,watH:0,fdmL:[],tx:[],tn:[],rot:0,hk:0});};
+  var by={},get=function(d){return by[d]||(by[d]={dead:0,cull:0,feed:0,wat:null,watH:0,fdmL:[],tx:[],tn:[],rot:0,hk:0,mv:0});};
   src.entries.forEach(function(e){
     if(!e||hs.indexOf(e.h)<0||!e.d||e.d<c.stockDate||(e.t!=='dead'&&e.t!=='cull'&&e.t!=='feed'))return;
     get(e.d)[e.t]+=Number(e.q)||0;
@@ -1377,7 +1406,7 @@ function dayRows(c,src,hs,HM){
     if(w!=null){r.wat=(r.wat||0)+w;r.watH+=hh?(hh[dd.h]||0):0;}
     if(f!=null)r.fdmL.push(f);
     var tx=thv(dd,'tmax'),tn=thv(dd,'tmin');if(isNum(tx))r.tx.push(tx);if(isNum(tn))r.tn.push(tn);
-    if(dd.rot===true)r.rot++;if(dd.hk===true)r.hk++;
+    if(dd.rot===true)r.rot++;if(dd.hk===true)r.hk++;if(dd.mv===true)r.mv++;
   });
   Object.keys(by).forEach(function(d){
     var r=by[d];
@@ -1409,7 +1438,7 @@ function workTally(hs){
 }
 function workText(dd){
   if(!dd)return '';
-  var a=[];if(dd.rot===true)a.push('로터리');
+  var a=[];if(dd.mv===true)a.push('분동');if(dd.rot===true)a.push('로터리');
   if(dd.hk===true)a.push('왕겨'+(Number(dd.hkg)>0?' '+fmtN(Number(dd.hkg))+'kg':''));
   return a.join(', ');
 }
@@ -2465,7 +2494,7 @@ function cmpStore(cid){
     var m={},KEEP=['tmax','tmin','hmax','hmin','tm','tn','te','hm','hn','he','wat','fdm','rem'];
     src.entries.forEach(function(e){if(!e||!e.d||e.h==null||!e.t)return;var k=e.d+'|'+e.h+'|'+e.t;m[k]=(m[k]||0)+(Number(e.q)||0);});
     var ds=src.days.map(function(d){
-      if(!d||!d.d||d.h==null)return null;var o={d:d.d,h:d.h};if(d.rot===true)o.rot=true;if(d.hk===true)o.hk=true;
+      if(!d||!d.d||d.h==null)return null;var o={d:d.d,h:d.h};if(d.rot===true)o.rot=true;if(d.hk===true)o.hk=true;if(d.mv===true)o.mv=true;
       KEEP.forEach(function(f){if(isNum(d[f]))o[f]=d[f];});return o;
     }).filter(Boolean);
     lsSet('wl-g-'+cid,JSON.stringify({v:2,e:Object.keys(m).map(function(k){var p=k.split('|');return [p[0],Number(p[1]),p[2],Math.round(m[k]*10)/10];}),d:ds,ship:si}));
@@ -2773,7 +2802,7 @@ function renderGraph(){
   g.mets=g.mets.filter(function(k){return ML.indexOf(k)>=0;});
   if(!g.mets.length)g.mets=['drate'];
   if(cm){cmpPrepare();ensureCmp();}else if(g.mets.indexOf('fpp')>=0)ensureShip(c.id);
-  var mark=g.mark||'rot',mname=mark==='hk'?'왕겨':'로터리';
+  var mark=g.mark||'rot',mname=mark==='hk'?'왕겨':mark==='mv'?'분동':'로터리';
   var panels=g.mets.map(function(k){
     var gg=Object.assign({},g,{metric:k}),ser=cm?cycleSeries(gg):houseSeries(c,gg);
     ser.forEach(function(s){s.mk=hasRotMark(k)?markDays(s.src,s.hs||[],mark):{};});
@@ -2787,7 +2816,7 @@ function renderGraph(){
     '<details class="gdet"'+(g.detOpen?' open':'')+'><summary data-gdet="1">'+EM('🧩')+'항목 직접 고르기 <span class="hint">· 지금 '+g.mets.map(function(k){return MET[k].label;}).join(', ')+'</span></summary>'+
     '<div class="glab">볼 항목 · 여러 개 누르면 위아래로 나란히 (최대 '+MAXP+'개)</div>'+
     '<div class="seg" role="group" aria-label="볼 항목">'+ML.map(function(k){return '<button type="button" data-gm="'+k+'" aria-pressed="'+(g.mets.indexOf(k)>=0)+'">'+EM(MICON[k])+MET[k].label+'</button>';}).join('')+'</div>'+
-    '<div class="glab">그래프에 ○로 표시할 작업</div>'+seg('data-gk',[['rot',IC('tractor')+'로터리'],['hk',IC('husk')+'왕겨'],['none','표시 안 함']],mark)+'</details>'+
+    '<div class="glab">그래프에 ○로 표시할 작업</div>'+seg('data-gk',[['rot',IC('tractor')+'로터리'],['hk',IC('husk')+'왕겨'],['mv',EM('🚚')+'분동'],['none','표시 안 함']],mark)+'</details>'+
     (anyEnv?seg('data-gw',[['all',EM('🌡️')+'최고·최저'],['tmax',EM('🔺')+'최고'],['tmin',EM('🔻')+'최저']],g.win):'')+
     (anyCnt?seg('data-gc',[['0',EM('📅')+'하루씩'],['1',EM('➕')+'누계']],g.cum?'1':'0'):'')+
     (cm?seg('data-gsc',[['all','전체 동']].concat(HOUSES.map(function(h){return [String(h),h+'동'];})),g.scope):'')+
@@ -3020,6 +3049,7 @@ function bindGraphHover(){
 var EVT=[
   {k:'rot',em:'🚜',name:'로터리 친 날'},
   {k:'hk',em:'🌾',name:'왕겨 넣은 날'},
+  {k:'mv',em:'🚚',name:'분동한 날'},
   {k:'cold',em:'🥶',name:'갑자기 추워진 날',desc:'최저온도가 평소보다 2℃ 이상 낮은 날',run:true},
   {k:'hot',em:'🥵',name:'갑자기 더워진 날',desc:'최고온도가 평소보다 2℃ 이상 높은 날',run:true},
   {k:'sick',em:'🩺',name:'폐사가 갑자기 늘어난 날',desc:'폐사가 평소의 2배 이상, 3수 이상 많은 날',run:true}
@@ -3062,6 +3092,7 @@ function effCalc(units){
       var r=by[isoDay(n)];
       if(ek==='rot')return !!(r&&r.rot>0);
       if(ek==='hk')return !!(r&&r.hk>0);
+      if(ek==='mv')return !!(r&&r.mv>0);
       if(ek==='cold'){var v=val(n,'tmin'),b=base(n,'tmin');return v!=null&&b!=null&&v<=b-2;}
       if(ek==='hot'){var v2=val(n,'tmax'),b2=base(n,'tmax');return v2!=null&&b2!=null&&v2>=b2+2;}
       if(ek==='sick'){var v3=val(n,'dead'),b3=base(n,'dead');return v3!=null&&b3!=null&&v3>=3&&v3>=2*b3&&v3-b3>=3;}
@@ -3286,6 +3317,7 @@ function bind(){
       if(act==='new'){cancelEdit();goHome(true);return;}
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
+      if(act==='mv-all'){var mo2=mvDates();HOUSES.forEach(function(h){if(!mo2[h])saveDayField(h,'mv',true);});return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='sr-go'){S.date=a.dataset.d;render();window.scrollTo(0,0);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
@@ -3423,6 +3455,11 @@ function bind(){
       t.value='';sg.classList.remove('neg');sg.textContent='+';sg.setAttribute('aria-pressed','false');
       addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ,ftv);
       return;
+    }
+    if(t.type==='checkbox'&&t.dataset.f==='mv'){
+      var mh=Number(t.dataset.h),mo=mvDates()[mh];
+      if(t.checked&&mo&&mo!==S.date){t.checked=false;toast(mh+'동은 이미 '+dot(mo)+'에 분동으로 기록돼 있습니다. 그 날짜에서 먼저 체크를 푸세요');return;}
+      saveDayField(mh,'mv',t.checked);return;
     }
     if(t.type==='checkbox'&&(t.dataset.f==='rot'||t.dataset.f==='hk')){
       var hh=Number(t.dataset.h);
