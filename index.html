@@ -143,6 +143,11 @@ body.tddrag{overflow:hidden}
 .mvbar h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.mvbar h2 small{font-size:13px;font-weight:400;color:var(--muted)}
 .mvchips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
 .mvbar[hidden]{display:none}
+.fpen{margin:6px 0 4px}.fpen[hidden]{display:none}.fpen .seg button small{font-size:12px;opacity:.8;margin-left:4px}
+.mvr{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:10px;padding:10px;border-radius:12px;border:1px solid rgba(217,179,108,.42);background:rgba(217,179,108,.08)}
+.mvr>span{flex:1 1 100%;display:flex;flex-direction:column}.mvr>span small{color:var(--muted);font-size:13px}
+.mvr .mvrin{flex:1;min-width:0;height:46px;font-size:18px;text-align:right;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink);padding:0 10px}
+.mvr .btn{min-height:46px}.mvr .mvrok{flex:1 1 100%;color:var(--good);font-size:14px}
 .mvc{font:inherit;color:inherit;background:rgba(255,255,255,.03);cursor:pointer;min-height:76px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;border:1px dashed var(--line);border-top:5px solid var(--hc,var(--accent));min-width:0}
 .mvc b{font-size:20px}.mvc i{font-style:normal;font-size:15px;font-weight:700;color:var(--muted)}.mvc small{font-size:12px;color:var(--muted)}
 .mvc.done{border-style:solid;border-color:rgba(69,217,138,.5);border-top-color:var(--hc,var(--accent));background:rgba(69,217,138,.08)}.mvc.done i{color:var(--good)}.mvc.done:not(.today){opacity:.6}.mvc.today{box-shadow:0 0 0 2px var(--good) inset}
@@ -620,7 +625,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v32';
+var VER='v33';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -671,6 +676,10 @@ function headsOf(c,h){return Number(c.heads&&c.heads[h])||0;}
 /* ---------- 분동: 입식은 1동·5동에만 받고 칸막이로 나눠 둔다(1동 안 1·2·3동 칸, 5동 안 4·5동 칸).
    일령이 되면 각 동으로 옮기는데(분동) 하루에 몇 동을 하든 상관없다. 동별 '분동한 날' 체크(days 문서의 mv)로 기록한다. ---------- */
 var PEN={1:1,2:1,3:1,4:5,5:5};
+var PENS={1:[1,2,3],5:[4,5]};
+/* 그 날짜에 아직 칸막이 안에 있는 동(분동 전) */
+function inPen(h,d,MVD){var m=(MVD||mvDates())[h];return !m||m>d;}
+function activePens(d,MVD){MVD=MVD||mvDates();return [1,5].filter(function(p){return PENS[p].some(function(h){return inPen(h,d,MVD);});});}
 function mvDates(){var o={};S.days.forEach(function(dd){if(dd&&dd.mv===true&&dd.d&&dd.h>=1&&(!o[dd.h]||dd.d<o[dd.h]))o[dd.h]=dd.d;});return o;}
 /* 성적 계산 기준 = 서류 입식 마릿수(서비스 2% 제외). 전체 동이면 등록한 입식 마릿수, 일부 동이면 배분 마릿수 ÷ 1.02 */
 function docOf(c,hs){
@@ -1158,10 +1167,10 @@ function feedCardHTML(){
       '<td><input class="frem" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" placeholder="0" aria-label="'+h+'동 남은 재고 kg"></td></tr>';
   }).join('');
   return '<section class="card feedcard" id="fcard"><h2>'+IC('feed')+'사료 입고 계산</h2>'+
-    '<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
+    '<div class="fpen" id="fpen" hidden></div>'+'<label class="wfield"><div>입고량<span>kg</span></div><input id="fqIn" type="text" inputmode="decimal" autocomplete="off" placeholder="오늘 입고 kg"></label>'+
     '<div id="fdet" hidden><div class="ftrow ftmain" role="radiogroup" aria-label="사료 종류">'+EM('🍽️')+'<b>종류</b>'+FT.map(function(f){
       return '<label class="ck"><input type="radio" name="fts" value="'+f.k+'">'+f.label+'</label>';}).join('')+'</div>'+
-    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>배분</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
+    '<div class="scroll"><table class="tbl fdt"><thead><tr><th>동</th><th>배분</th><th>사육수</th><th>남은 재고(kg)</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+'<p class="hint" id="fpenNote" hidden></p>'+
     '<div class="hint" id="fsum"></div>'+
     '<div class="hint">이번 입고를 받지 않는 동은 \'배분\' 체크를 풀면 남은 동끼리만 나눕니다(이 입식에서 계속 기억). 배분 결과가 아래 각 동 사료 칸에 표시되고, 동마다 고쳐서 맞춘 뒤 그 동의 확인을 누르면 기록됩니다.</div></div>'+
     '</section>';
@@ -1182,11 +1191,25 @@ function fexSync(){
     var lb=cb&&cb.nextElementSibling;if(lb)lb.textContent=f[h]?'제외':'배분';
   });
 }
+/* 분동 전: 1동(또는 5동) 사료통에 받은 양은 그 칸막이 안에 있는 동끼리 사육수 비율로 나눈다 */
+function fpenCur(){var ap=activePens(S.date);if(!ap.length)return 0;if(S.fpen===0)return 0;if(ap.indexOf(S.fpen)<0)S.fpen=ap[0];return S.fpen;}
+function fpenRender(){
+  var el=$('fpen');if(!el)return;var ap=activePens(S.date),cur=fpenCur();
+  el.hidden=!ap.length;
+  if(ap.length){var k=ap.map(function(p){return p+':'+PENS[p].filter(function(h){return inPen(h,S.date);}).join('');}).join()+'|'+cur+'|'+S.date;if(el.dataset.k!==k){el.dataset.k=k;
+    el.innerHTML='<div class="glab">받은 곳</div><div class="seg" role="group">'+ap.map(function(p){
+      return '<button type="button" data-act="fpen" data-p="'+p+'" aria-pressed="'+(cur===p)+'">'+p+'동 사료통 <small>'+PENS[p].filter(function(h){return inPen(h,S.date);}).join('·')+'동</small></button>';}).join('')+
+      '<button type="button" data-act="fpen" data-p="0" aria-pressed="'+(cur===0)+'">동별</button></div>';}}
+  var tb=document.querySelector('#fcard .fdt'),nt=$('fpenNote');
+  if(tb)tb.closest('.scroll').hidden=!!cur;
+  if(nt){nt.hidden=!cur;if(cur)nt.textContent=cur+'동 사료통에 받은 양을 칸막이 안 '+PENS[cur].filter(function(h){return inPen(h,S.date);}).join('·')+'동 사육수 비율로 나눕니다.';}
+}
 function feedAlloc(){
   var qty=Number(($('fqIn').value||'').replace(/,/g,''));if(!isFinite(qty)||qty<0)qty=0;
-  var fx=fexGet();
+  var fx=fexGet(),pn=fpenCur();
+  if(pn){fx={};HOUSES.forEach(function(h){if(PENS[pn].indexOf(h)<0||!inPen(h,S.date))fx[h]=true;});}
   var now={},rem={},act=HOUSES.filter(function(h){return (S.nowH&&S.nowH[h])>0&&!fx[h];}),al={};
-  HOUSES.forEach(function(h){now[h]=(S.nowH&&S.nowH[h])||0;var r=Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));rem[h]=isFinite(r)&&r>0?r:0;al[h]=0;});
+  HOUSES.forEach(function(h){now[h]=(S.nowH&&S.nowH[h])||0;var r=pn?0:Number((document.querySelector('.frem[data-h="'+h+'"]').value||'').replace(/,/g,''));rem[h]=isFinite(r)&&r>0?r:0;al[h]=0;});
   var guard=0;
   while(act.length&&guard++<10){
     var pool=qty,sn=0;act.forEach(function(h){pool+=rem[h];sn+=now[h];});
@@ -1213,7 +1236,8 @@ function feedSumRefresh(){
 function feedRecalc(){
   var fq=$('fqIn');if(!fq)return;
   var has=(Number((fq.value||'').replace(/,/g,''))||0)>0;
-  fexSync();var fx=fexGet();
+  fexSync();fpenRender();var fx=fexGet(),pn=fpenCur();
+  if(pn){fx={};HOUSES.forEach(function(h){if(PENS[pn].indexOf(h)<0||!inPen(h,S.date))fx[h]=true;});}
   $('fdet').hidden=!has;document.querySelectorAll('.falrow').forEach(function(r){var fi=r.querySelector('.fal');r.hidden=!has||!!(fi&&fx[Number(fi.dataset.h)]);});if(!has)return;
   HOUSES.forEach(function(h){var n=document.querySelector('[data-fn="'+h+'"]');if(n)n.textContent=fmt((S.nowH&&S.nowH[h])||0);});
   var al=feedAlloc();
@@ -1318,20 +1342,50 @@ function refreshInput(){
     ''+cnt;
   var di=$('dateIn');if(di&&document.activeElement!==di&&di.value!==S.date)di.value=S.date;
   var dt=$('dateTxt');if(dt)dt.textContent=shortDate(S.date);
-  renderMvBar(c,MVD);fexSync();renderEnv();
+  renderMvBar(c,MVD);fexSync();fpenRender();renderEnv();
+}
+function mvrApply(p){
+  if(!S.db||!S.cid||!S.canWrite)return;
+  var inp=document.querySelector('.mvrin[data-p="'+p+'"]');if(!inp)return;
+  var raw=(inp.value||'').trim().replace(/,/g,''),R=raw===''?0:Number(raw);
+  if(!isFinite(R)||R<0){toast('kg를 숫자로 입력하세요');return;}
+  var MVD=mvDates(),out=PENS[p].filter(function(h){return h!==p&&MVD[h]===S.date;});if(!out.length)return;
+  var stay=PENS[p].filter(function(h){var m=MVD[h];return !m||m>=S.date;}),sn=0;
+  stay.forEach(function(h){sn+=(S.nowH&&S.nowH[h])||0;});
+  var prev=(dayDoc(S.cid,S.date,p)||{}).mvr||{},ft=null,fat='',nw={kg:R||null};
+  S.entries.forEach(function(e){var k=e&&(e.d+'|'+String(1e13+(e.at||0)));if(e&&e.h===p&&e.t==='feed'&&e.d<=S.date&&ftLabel(e.ft)&&k>fat){fat=k;ft=e.ft;}});
+  var tot=0;
+  out.forEach(function(h){
+    var sh=sn>0?Math.round(R*((S.nowH&&S.nowH[h])||0)/sn*10)/10:0,d=Math.round((sh-(Number(prev[h])||0))*10)/10;
+    nw[h]=sh;if(d!==0){addEntry(h,'feed',-d,null,null,ft);tot+=d;}
+  });
+  tot=Math.round(tot*10)/10;if(tot!==0)addEntry(p,'feed',tot,null,null,ft);
+  saveDayField(p,'mvr',R>0?nw:null);
+  toast(R>0?'남은 사료 반영됨':'남은 사료 반영을 지웠습니다');
 }
 function renderMvBar(c,MVD){
   var bar=$('mvbar');if(!bar)return;
   var left=HOUSES.filter(function(h){return !MVD[h];});
   /* 전 동 분동이 끝나면 메뉴를 숨긴다. 단 마지막 분동한 날에는 잘못 누른 것을 고칠 수 있게 남겨 둔다 */
   var last=null;HOUSES.forEach(function(h){if(MVD[h]&&(!last||MVD[h]>last))last=MVD[h];});
-  if(!left.length&&S.date!==last){bar.hidden=true;bar.innerHTML='';return;}
+  var isMvDay=HOUSES.some(function(h){return MVD[h]===S.date;});
+  if(!left.length&&!isMvDay){bar.hidden=true;bar.innerHTML='';bar.dataset.k='';return;}
   bar.hidden=false;
+  /* 오늘 칸막이에서 나간 동이 있으면: 그 사료통에 남은 사료(나간 동 몫)를 사료통 동으로 넘긴다 */
+  var rrows=[1,5].map(function(p){
+    var out=PENS[p].filter(function(h){return h!==p&&MVD[h]===S.date;});if(!out.length)return '';
+    var mr=(dayDoc(S.cid,S.date,p)||{}).mvr||null,kg=mr&&isNum(mr.kg)?mr.kg:null;
+    return '<div class="mvr"><span>'+EM('🍽️')+'<b>'+p+'동 사료통 남은 사료</b><small>'+out.join('·')+'동 몫을 '+p+'동으로 넘김 · 모르면 비워 두세요</small></span>'+
+      '<input class="mvrin" type="text" inputmode="decimal" autocomplete="off" data-p="'+p+'" placeholder="kg" value="'+(kg!=null?kg:'')+'" aria-label="'+p+'동 사료통 남은 사료 kg">'+
+      '<button type="button" class="btn p" data-act="mvr-ok" data-p="'+p+'">반영</button>'+
+      (mr&&kg?'<small class="mvrok">'+out.map(function(h){return h+'동 −'+fmtN(Number(mr[h])||0);}).join(' · ')+' → '+p+'동 +'+fmtN(out.reduce(function(a,h){return a+(Number(mr[h])||0);},0))+' kg</small>':'')+'</div>';
+  }).join('');
+  var key=JSON.stringify([MVD,S.date,last,rrows]);if(bar.dataset.k===key)return;bar.dataset.k=key;
   bar.innerHTML='<h2>'+EM('🚚')+'분동 <small>'+dot(S.date).slice(3)+' 옮긴 동을 누르세요</small></h2>'+
     '<div class="mvchips">'+HOUSES.map(function(h){var d=MVD[h],today=d===S.date;
       return '<button type="button" class="mvc'+(d?' done':'')+(today?' today':'')+'" data-act="mv-tog" data-h="'+h+'" style="--hc:var(--s'+h+')" aria-pressed="'+(!!d)+'"'+(d&&!today?' aria-disabled="true"':'')+'><b>'+h+'동</b>'+
         (d?'<i>'+dot(d).slice(3)+'</i><small>'+ageOf(c,d)+'일령</small>':'<i>대기</i><small>'+PEN[h]+'동 칸</small>')+'</button>';}).join('')+'</div>'+
-    (left.length?'':'<p class="hint">전 동 분동 완료 · 내일부터 이 칸은 사라집니다. 잘못 눌렀으면 다시 누르면 취소됩니다.</p>');
+    rrows+(left.length?'':'<p class="hint">전 동 분동 완료 · 분동한 날짜가 지나면 이 칸은 사라집니다. 잘못 눌렀으면 다시 누르면 취소됩니다.</p>');
 }
 
 /* 기록 탭 */
@@ -3319,8 +3373,11 @@ function bind(){
       if(act==='new'){cancelEdit();goHome(true);return;}
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
+      if(act==='fpen'){S.fpen=Number(a.dataset.p);fpenRender();feedRecalc();return;}
+      if(act==='mvr-ok'){mvrApply(Number(a.dataset.p));return;}
       if(act==='mv-tog'){var mh=Number(a.dataset.h),mo=mvDates()[mh];
         if(mo&&mo!==S.date){toast(mh+'동은 '+dot(mo)+'에 분동했습니다. 고치려면 그 날짜에서 누르세요');return;}
+        var bd=dayDoc(S.cid,S.date,PEN[mh])||{};if(mo&&bd.mvr&&Number(bd.mvr[mh])){toast('남은 사료 반영을 먼저 지우세요(칸을 비우고 반영)');return;}
         saveDayField(mh,'mv',!mo);if(!mo)toast(mh+'동 분동 기록');return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='sr-go'){S.date=a.dataset.d;render();window.scrollTo(0,0);return;}
