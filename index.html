@@ -139,6 +139,7 @@ body.tddrag{overflow:hidden}
 .hkl[hidden]{display:none}
 .mvline{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-size:16px;color:var(--muted);padding:8px 12px;border-radius:12px;border:1px dashed var(--line)}
 .mvline b{color:var(--ink);font-size:18px}.mvline b.ok{color:var(--good)}.mvline small{font-size:13px}
+.mvline[hidden]{display:none}
 .mvline.done{border-style:solid;border-color:rgba(69,217,138,.45);background:rgba(69,217,138,.08)}
 .mvbar h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.mvbar h2 small{font-size:13px;font-weight:400;color:var(--muted)}
 .mvchips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
@@ -625,7 +626,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v33';
+var VER='v34';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -1314,7 +1315,7 @@ function refreshInput(){
     if(ckR)ckR.checked=dd.rot===true;
     var mvl=card.querySelector('[data-mvl]');if(mvl){var md=MVD[h];
       var ml=(md&&S.date>=md)?'<b class="ok">분동</b> '+dot(md).slice(3)+' · '+ageOf(c,md)+'일령':'<b>분동 전</b> '+PEN[h]+'동 칸에 있음';
-      mvl.innerHTML=EM('🚚')+ml;mvl.classList.toggle('done',!!(md&&S.date>=md));}
+      var mdone=!!(md&&S.date>=md);mvl.hidden=mdone;if(!mdone)mvl.innerHTML=EM('🚚')+ml;}
     if(ckH)ckH.checked=dd.hk===true;
     if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;var hl2=kg.closest('.hkl');if(hl2)hl2.hidden=!(dd.hk===true);}
     setVal(card.querySelector('textarea'),dd.memo);
