@@ -142,10 +142,11 @@ body.tddrag{overflow:hidden}
 .mvline.done{border-style:solid;border-color:rgba(69,217,138,.45);background:rgba(69,217,138,.08)}
 .mvbar h2{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:0 0 10px}.mvbar h2 small{font-size:13px;font-weight:400;color:var(--muted)}
 .mvchips{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-.mvc{display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;border:1px dashed var(--line);border-top:5px solid var(--hc,var(--accent));min-width:0}
+.mvbar[hidden]{display:none}
+.mvc{font:inherit;color:inherit;background:rgba(255,255,255,.03);cursor:pointer;min-height:76px;display:flex;flex-direction:column;align-items:center;gap:2px;padding:8px 2px;border-radius:12px;border:1px dashed var(--line);border-top:5px solid var(--hc,var(--accent));min-width:0}
 .mvc b{font-size:20px}.mvc i{font-style:normal;font-size:15px;font-weight:700;color:var(--muted)}.mvc small{font-size:12px;color:var(--muted)}
-.mvc.done{border-style:solid;border-color:rgba(69,217,138,.5);border-top-color:var(--hc,var(--accent));background:rgba(69,217,138,.08)}.mvc.done i{color:var(--good)}
-.mvact{margin-top:10px}.mvact .btn{width:100%;min-height:52px;font-size:17px;flex-wrap:wrap}.mvact .btn small{font-size:13px;opacity:.85;margin-left:6px}
+.mvc.done{border-style:solid;border-color:rgba(69,217,138,.5);border-top-color:var(--hc,var(--accent));background:rgba(69,217,138,.08)}.mvc.done i{color:var(--good)}.mvc.done:not(.today){opacity:.6}.mvc.today{box-shadow:0 0 0 2px var(--good) inset}
+
 .fdt input{width:100%;height:42px;text-align:right;padding:0 6px;font-size:17px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
 .fdt td,.fdt th{padding:4px 3px;text-align:center}
 .feedcard .wfield{margin:8px 0}
@@ -619,7 +620,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v31';
+var VER='v32';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -1139,8 +1140,7 @@ function cardHTML(h){
     '<div class="temps one">'+temps+hums+'</div>'+
     '<div class="smart" data-smart hidden></div>'+
     '<div class="mvline" data-mvl></div>'+
-    '<div class="works"><label class="ck mvck"><input type="checkbox" data-h="'+h+'" data-f="mv" aria-label="'+h+'동 분동한 날"><span class="em" aria-hidden="true">🚚</span>분동</label>'+
-    '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
+    '<div class="works"><label class="ck"><input type="checkbox" data-h="'+h+'" data-f="rot" aria-label="'+h+'동 로터리 작업"><span class="ico i-tractor" aria-hidden="true"></span>로터리</label>'+
     '<label class="ck"><input type="checkbox" data-h="'+h+'" data-f="hk" aria-label="'+h+'동 왕겨 작업"><span class="ico i-husk" aria-hidden="true"></span>왕겨</label>'+
     '<label class="hkl">kg<input class="kin" type="text" inputmode="decimal" autocomplete="off" data-h="'+h+'" data-f="hkg" placeholder="kg" aria-label="'+h+'동 왕겨 kg" disabled></label></div>'+
     '<div class="memo-label">'+EM('📝')+'비고</div><textarea class="memo" data-h="'+h+'" data-f="memo" aria-label="'+h+'동 비고" placeholder="오늘 특이사항"></textarea>'+
@@ -1288,9 +1288,8 @@ function refreshInput(){
     ALLF.forEach(function(x){var inp=card.querySelector('[data-f="'+x.f+'"]');setVal(inp,dd[x.f]);if(inp){var lv=thv(dd,x.f);inp.placeholder=(!isNum(dd[x.f])&&lv!=null)?fmtT(lv):x.label;}});
     var ckR=card.querySelector('input[data-f="rot"]'),ckH=card.querySelector('input[data-f="hk"]'),kg=card.querySelector('input[data-f="hkg"]');
     if(ckR)ckR.checked=dd.rot===true;
-    var ckM=card.querySelector('input[data-f="mv"]');if(ckM)ckM.checked=dd.mv===true;
     var mvl=card.querySelector('[data-mvl]');if(mvl){var md=MVD[h];
-      var ml=(md&&S.date>=md)?'<b class="ok">분동 완료</b> '+dot(md)+' · '+ageOf(c,md)+'일령에 옮김':'<b>분동 전</b> '+PEN[h]+'동 안 '+h+'동 칸'+(md?' <small>· '+dot(md)+'('+ageOf(c,md)+'일령) 분동</small>':'');
+      var ml=(md&&S.date>=md)?'<b class="ok">분동</b> '+dot(md).slice(3)+' · '+ageOf(c,md)+'일령':'<b>분동 전</b> '+PEN[h]+'동 칸에 있음';
       mvl.innerHTML=EM('🚚')+ml;mvl.classList.toggle('done',!!(md&&S.date>=md));}
     if(ckH)ckH.checked=dd.hk===true;
     if(kg){setVal(kg,dd.hk===true?dd.hkg:null);kg.disabled=!(dd.hk===true)||!S.canWrite;var hl2=kg.closest('.hkl');if(hl2)hl2.hidden=!(dd.hk===true);}
@@ -1324,12 +1323,15 @@ function refreshInput(){
 function renderMvBar(c,MVD){
   var bar=$('mvbar');if(!bar)return;
   var left=HOUSES.filter(function(h){return !MVD[h];});
-  bar.innerHTML='<h2>'+EM('🚚')+'분동 <small>1동 칸막이(1·2·3동) · 5동 칸막이(4·5동)에서 각 동으로</small></h2>'+
-    '<div class="mvchips">'+HOUSES.map(function(h){var d=MVD[h];
-      return '<span class="mvc'+(d?' done':'')+'" style="--hc:var(--s'+h+')"><b>'+h+'동</b>'+(d?'<i>'+dot(d).slice(3)+'</i><small>'+ageOf(c,d)+'일령</small>':'<i>대기</i><small>'+PEN[h]+'동 칸</small>')+'</span>';}).join('')+'</div>'+
-    (left.length?'<div class="mvact"><button type="button" class="btn p" data-act="mv-all">'+EM('🚚')+'오늘('+dot(S.date).slice(3)+') 남은 동 모두 분동 <small>'+left.map(function(h){return h+'동';}).join('·')+'</small></button></div>'
-      :'<p class="hint">모든 동의 분동이 끝났습니다.</p>')+
-    '<p class="hint">동마다 분동한 날 아래 \'분동\' 칸을 체크하면 기록됩니다. 하루에 한 동씩 하든 여러 동을 하든 날짜별로 따로 체크하세요. 잘못 눌렀으면 그 날짜에서 체크를 풀면 됩니다.</p>';
+  /* 전 동 분동이 끝나면 메뉴를 숨긴다. 단 마지막 분동한 날에는 잘못 누른 것을 고칠 수 있게 남겨 둔다 */
+  var last=null;HOUSES.forEach(function(h){if(MVD[h]&&(!last||MVD[h]>last))last=MVD[h];});
+  if(!left.length&&S.date!==last){bar.hidden=true;bar.innerHTML='';return;}
+  bar.hidden=false;
+  bar.innerHTML='<h2>'+EM('🚚')+'분동 <small>'+dot(S.date).slice(3)+' 옮긴 동을 누르세요</small></h2>'+
+    '<div class="mvchips">'+HOUSES.map(function(h){var d=MVD[h],today=d===S.date;
+      return '<button type="button" class="mvc'+(d?' done':'')+(today?' today':'')+'" data-act="mv-tog" data-h="'+h+'" style="--hc:var(--s'+h+')" aria-pressed="'+(!!d)+'"'+(d&&!today?' aria-disabled="true"':'')+'><b>'+h+'동</b>'+
+        (d?'<i>'+dot(d).slice(3)+'</i><small>'+ageOf(c,d)+'일령</small>':'<i>대기</i><small>'+PEN[h]+'동 칸</small>')+'</button>';}).join('')+'</div>'+
+    (left.length?'':'<p class="hint">전 동 분동 완료 · 내일부터 이 칸은 사라집니다. 잘못 눌렀으면 다시 누르면 취소됩니다.</p>');
 }
 
 /* 기록 탭 */
@@ -3317,7 +3319,9 @@ function bind(){
       if(act==='new'){cancelEdit();goHome(true);return;}
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
-      if(act==='mv-all'){var mo2=mvDates();HOUSES.forEach(function(h){if(!mo2[h])saveDayField(h,'mv',true);});return;}
+      if(act==='mv-tog'){var mh=Number(a.dataset.h),mo=mvDates()[mh];
+        if(mo&&mo!==S.date){toast(mh+'동은 '+dot(mo)+'에 분동했습니다. 고치려면 그 날짜에서 누르세요');return;}
+        saveDayField(mh,'mv',!mo);if(!mo)toast(mh+'동 분동 기록');return;}
       if(act==='td-add'){addTodo(a.dataset.side);return;}
       if(act==='sr-go'){S.date=a.dataset.d;render();window.scrollTo(0,0);return;}
       if(act==='td-del'){delTodo(a.dataset.id);return;}
@@ -3455,11 +3459,6 @@ function bind(){
       t.value='';sg.classList.remove('neg');sg.textContent='+';sg.setAttribute('aria-pressed','false');
       addEntry(Number(t.dataset.h),t.dataset.t,q,t,rawQ,ftv);
       return;
-    }
-    if(t.type==='checkbox'&&t.dataset.f==='mv'){
-      var mh=Number(t.dataset.h),mo=mvDates()[mh];
-      if(t.checked&&mo&&mo!==S.date){t.checked=false;toast(mh+'동은 이미 '+dot(mo)+'에 분동으로 기록돼 있습니다. 그 날짜에서 먼저 체크를 푸세요');return;}
-      saveDayField(mh,'mv',t.checked);return;
     }
     if(t.type==='checkbox'&&(t.dataset.f==='rot'||t.dataset.f==='hk')){
       var hh=Number(t.dataset.h);
