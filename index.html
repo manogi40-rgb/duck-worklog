@@ -624,9 +624,10 @@ function addDays(s,n){return new Date((dayNum(s)+n)*86400000).toISOString().slic
 function dot(s){return String(s==null?'':s).replace(/^\d{2}(?=\d{2}-\d{2}-\d{2}$)/,'').replace(/-/g,'.');}
 function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 
+window.__wlBadge=function(){lastBadge=null;updateBadge();if(S.tab==='home')fillList();renderHeader();};
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v34';
+var VER='v35';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -739,12 +740,13 @@ function onCycles(snap,fromGet){
   }
   S.cycles=snap.docs.map(function(d){var o=Object.assign({},d.data());o.id=d.id;return o;}).sort(function(a,b){return String(b.stockDate).localeCompare(String(a.stockDate));});
   S.ready=true;S.stale=false;S.cyclesDef=true;
-  if(!isOwner()&&S.cycles.length&&S.cycles[0].id!==S.cid){selectCycle(S.cycles[0].id);}
+  if(!isOwner()&&S.cycles.length){var lc0=latestCycle();if(lc0&&lc0.id!==S.cid)selectCycle(lc0.id);}
   try{lsSet('wl-cyc',JSON.stringify(S.cycles.slice(0,30)));}catch(e){}
+  updateBadge();
   if(!cyc()){
     var pref=lsGet('wl-cid');var next=null;
     for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===pref){next=pref;break;}}
-    if(!next&&S.cycles.length)next=S.cycles[0].id;
+    if(!next&&S.cycles.length)next=(latestCycle()||S.cycles[0]).id;
     selectCycle(next);
   }else{
     if(S.cid&&S.db&&!S.unsubs.length)subscribeCycle(S.cid);
@@ -823,14 +825,27 @@ function emptyHTML(loading){
   if(!isOwner())return '<div class="state"><h2>입식 기록이 없습니다</h2><p>사장님이 입식을 등록하면 이곳에서 입력할 수 있습니다.</p></div>';
   return '<div class="state"><h2>입식 기록이 없습니다</h2><p>입식일과 총 마릿수를 넣으면 동별 마릿수가 자동으로 나뉘고, 도태·폐사·사료·온도 입력을 시작할 수 있습니다.</p><button type="button" class="btn primary" data-act="new">첫 입식 등록</button></div>';
 }
+function planHTML(c){
+  var n=daysLeft(c);
+  return '<div class="state"><div style="font-size:56px;font-weight:800;color:var(--accent);line-height:1.1">D-'+n+'</div>'+
+    '<h2>'+dot(c.stockDate)+' 입식 예정</h2>'+
+    '<p>'+(isPlanned(c)?'입식 마릿수는 아직 입력하지 않았습니다. ':'총 '+fmt(Number(c.total)||0)+'수 · ')+'입식일부터 입력할 수 있습니다.</p>'+
+    (isOwner()?'<button type="button" class="btn primary" data-act="edit" data-cid="'+esc(c.id)+'">'+EM('✏️')+'입식 정보 수정</button>':'')+'</div>';
+}
+function planBarHTML(c){
+  if(!c||!isPlanned(c))return '';
+  return '<section class="card" style="border:2px solid var(--bad)"><b>'+EM('⚠️')+'입식 마릿수를 아직 입력하지 않았습니다</b>'+
+    (isOwner()?'<p class="hint" style="margin:4px 0 8px">마릿수를 넣어야 동별 배분·폐사율·사료 계산이 됩니다.</p><button type="button" class="btn primary" data-act="edit" data-cid="'+esc(c.id)+'">'+EM('✏️')+'마릿수 입력</button>':'<p class="hint" style="margin:4px 0 0">사장님이 마릿수를 입력하면 비율이 계산됩니다.</p>')+'</section>';
+}
 function renderHeader(){
   var c=cyc();
   var sn=$('syncNote');if(sn)sn.hidden=!(S.cid&&S.ready&&(S.stale||(S.db&&!(S.sync.e&&S.sync.d))));
   if(!c){$('cycTitle').textContent=S.ready?'입식을 등록하세요':'작업일지';$('cycAge').hidden=true;return;}
   $('cycTitle').textContent=dot(c.stockDate)+' 입식';
-  var cs=$('cycSub');if(cs)cs.textContent='총 '+fmt(Number(c.total)||0)+'수 · 낙원농장 작업일지';
+  var cs=$('cycSub');if(cs)cs.textContent=(isPlanned(c)?'마릿수 미입력':'총 '+fmt(Number(c.total)||0)+'수')+' · 낙원농장 작업일지';
   var a=ageOf(c,S.date),sm=(S.shipMap||{})[c.id],sd=(sm&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||'')&&sm.date>=c.stockDate)?sm.date:null;
   if(sd){$('cycAge').hidden=false;$('cycAge').innerHTML='<b>'+ageOf(c,sd)+'</b><span>일령 출하</span>';}
+  else if(daysLeft(c)>0){$('cycAge').hidden=false;$('cycAge').innerHTML='<b>D-'+daysLeft(c)+'</b><span>입식 예정</span>';}
   else{$('cycAge').hidden=a<1;$('cycAge').innerHTML='<b>'+a+'</b><span>일령</span>';}
 }
 function render(){
@@ -847,6 +862,7 @@ function render(){
   if(!S.ready||!c){
     pane.innerHTML=emptyHTML(!S.ready);S.inKey=null;S.avgKey=null;return;
   }
+  if(daysLeft(c)>0){pane.innerHTML=planHTML(c);S.inKey=null;S.avgKey=null;return;}
   if(S.tab==='input')renderInput();else if(S.tab==='log')renderLog();else renderAvg();
   updateRO();
 }
@@ -965,7 +981,32 @@ function addTodo(side){
 function todoMemoDate(c){var t=todayStr();if(t<c.stockDate)t=c.stockDate;var mx=inMaxDate(c);return t>mx?mx:t;}
 function todoMemoLine(item){return '[할일] '+item.text;}
 /* 가장 최근 입식이 아직 사육 중인지: 아니면(출하 후·입식 전 빈 기간) 다음 입식 첫날로 넘긴다 */
-function latestCycle(){return S.cycles&&S.cycles.length?S.cycles[0]:null;}
+/* 기준 입식: 이미 입식한 파트 중 가장 최근 것. 그 파트가 끝났고(빈 기간) 입식 예정 파트가 있으면 예정 파트 */
+function latestCycle(){
+  var cs=S.cycles||[],t=todayStr(),started=null,fut=null;
+  for(var i=0;i<cs.length;i++){var c=cs[i];if(String(c.stockDate)<=t){if(!started)started=c;}else fut=c;}
+  if(started&&(!fut||!inGap(started)))return started;
+  return fut||started||null;
+}
+/* 입식 예정(아직 입식일 전)인 파트 중 가장 가까운 것과 남은 날수 */
+function daysLeft(c){return dayNum(c.stockDate)-dayNum(todayStr());}
+function nextPlanned(){
+  var cs=S.cycles||[],best=null;
+  cs.forEach(function(c){if(daysLeft(c)>0&&(!best||c.stockDate<best.stockDate))best=c;});
+  return best;
+}
+function isPlanned(c){return !!c&&!(Number(c.total)>0);}
+/* 앱 아이콘 숫자: 입식 예정일까지 남은 날수 (지원하는 기기만 · 앱을 열 때마다 갱신) */
+var lastBadge=null;
+function updateBadge(){
+  if(!('setAppBadge' in navigator))return;
+  var c=nextPlanned(),n=c?daysLeft(c):0;
+  if(n===lastBadge)return;lastBadge=n;
+  try{var p=n>0?navigator.setAppBadge(n):navigator.clearAppBadge();if(p&&p.catch)p.catch(function(){lastBadge=null;});}catch(e){lastBadge=null;}
+}
+function badgeAsk(){
+  return ('setAppBadge' in navigator)&&!!window.Notification&&Notification.permission==='default'&&!!nextPlanned();
+}
 function cycShipDay(c){
   var sm=(S.shipMap||{})[c.id];
   if(sm&&sm.ready&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||''))return sm.date;
@@ -1273,12 +1314,13 @@ function renderInput(){
       '<div class="datebar"><button type="button" class="btn" data-act="prev" aria-label="전날">‹</button>'+
       '<label class="dpick"><span id="dateTxt">'+shortDate(S.date)+'</span><input type="date" id="dateIn" value="'+S.date+'" min="'+cyc().stockDate+'" max="'+inMaxDate(cyc())+'" aria-label="날짜"></label>'+
       '<button type="button" class="btn" data-act="next" aria-label="다음날">›</button>'+
-      '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+todoShell()+
+      '<button type="button" class="btn" data-act="today">'+IC('calendar',26)+'오늘</button></div>'+'<div class="envbar" id="envBar" hidden></div>'+'<div id="planBar"></div>'+todoShell()+
       '<div class="sumline" id="sumline"></div>'+'<section class="card mvbar" id="mvbar"></section>'+feedCardHTML()+
       '<div class="hjump" role="group" aria-label="동 바로가기">'+HOUSES.map(function(h){return '<button type="button" data-jump="'+h+'" style="--hc:var(--s'+h+')" aria-label="'+h+'동으로 이동"><b>'+h+'<i>동</i></b><small data-jn="'+h+'"></small></button>';}).join('')+'</div>'+
       '<div class="houses" id="houses">'+HOUSES.map(cardHTML).join('')+'</div>';
     S.inKey=key;
   }
+  var pb=$('planBar');if(pb)pb.innerHTML=planBarHTML(cyc());
   renderTodos();renderTdHist();refreshInput();
 }
 function setVal(inp,v){
@@ -1597,7 +1639,7 @@ function pct2(n,d){return d>0?(n/d*100).toFixed(2)+'%':'–';}
 /* ---------- 입식 탭: 등록 · 목록 · 수정 · 백업 · 복원 ---------- */
 function cycleById(id){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===id)return S.cycles[i];}return null;}
 function isOwner(){try{return !!(S.user&&S.user.isOwner&&S.user.isOwner());}catch(e){return false;}}
-function parseTotal(){var el=$('nTotal');return el?Math.round(Number(String(el.value).replace(/[,\s]/g,''))):NaN;}
+function parseTotal(){var el=$('nTotal');if(!el)return NaN;var v=String(el.value).replace(/[,\s]/g,'');return v===''?0:Math.round(Number(v));}
 function nrow(label,id,unit){
   return '<label class="sd-row"><span>'+label+'<span class="s">'+unit+'</span></span><input class="sfld" type="text" inputmode="decimal" autocomplete="off" id="'+id+'" placeholder="0" aria-label="'+label+'"></label>';
 }
@@ -1707,14 +1749,14 @@ function renderHome(){
       '<div class="cyc-list" id="cycList"></div></section><div id="bkBox"></div><section class="card" id="autoBk" hidden></section>'+
       '<section class="card" id="homeForm"><button type="button" class="foldhead" data-act="form-toggle" aria-expanded="false"><h2 id="formTitle">'+IC('duck')+'새 입식 등록</h2><span class="caret" aria-hidden="true">▾</span></button><div id="formBody" class="foldbody" hidden>'+
       '<div class="frow"><label class="nfield">입식일<span class="dpick" style="height:46px;font-size:17px;flex:none;width:100%"><span id="nDateTxt">–</span><input type="date" id="nDate"></span></label>'+
-      '<label class="nfield">총 마릿수<input type="text" id="nTotal" inputmode="numeric" autocomplete="off" placeholder="예: 25000"></label></div>'+
+      '<label class="nfield">총 마릿수<input type="text" id="nTotal" inputmode="numeric" autocomplete="off" placeholder="모르면 비워 두기"></label></div>'+
       '<label class="nfield">비고(메모)<textarea class="nnote" id="nNote" maxlength="500" placeholder="예: 입식 업체, 사료 회사, 특이사항"></textarea></label>'+
       '<div id="nTermsBox"'+(isOwner()?'':' hidden')+'>'+
       '<div class="memo-label" style="margin:10px 0 0">정산 단가 <span class="hint">(선택 · 정산 탭에 자동 적용, 나중에 고칠 수 있음)</span></div>'+
       nrow('생체 단가','nLive','원/kg')+nrow('병아리 단가','nChick','원/마리')+nrow('전기·크럼블 사료 단가','nFeed','원/kg')+nrow('후기 사료 단가','nFeedLate','원/kg')+nrow('친환경 보조금','nEco','원/마리')+nrow('그 밖의 보조금(직접)','nOther','원/마리')+
       '<div class="memo-label" style="margin:10px 0 0">월별 보조금 단가 (1~12월) <span class="hint">· 연료·깔짚, 원/마리 · 한 번만 입력하면 계속 유지</span></div>'+subHTML('n')+'</div>'+
       '<div class="prev" id="nPrev" aria-live="polite"></div>'+
-      '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.</p>'+
+      '<p class="hint" id="nHint">동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다. 입식 전이면 날짜만 넣어 예정으로 등록하고, 마릿수·비고는 입식일에 “수정”으로 넣으세요.</p>'+
       '<p class="err" id="nErr" hidden></p>'+
       '<div class="cyc-btns"><button type="button" class="btn primary" id="nSave" data-act="save">'+EM('➕')+'입식 등록</button>'+
       '<button type="button" class="btn" id="nCancel" data-act="cancel-edit" hidden>'+EM('✖️')+'취소</button></div></div></section>'+
@@ -1733,16 +1775,17 @@ function fillList(){
   if(!S.ready){box.innerHTML='<p class="hint">'+esc(S.status)+'</p>';return;}
   if(!S.db){box.innerHTML='<p class="hint">저장소에 연결되지 않아 목록을 불러올 수 없습니다. 인터넷 연결을 확인하고 앱을 다시 열어 주세요.</p>';return;}
   if(!S.cycles.length){box.innerHTML='<p class="hint">아직 등록된 입식이 없습니다. 아래에서 입식일과 총 마릿수를 넣어 등록하세요.</p>';return;}
+  updateBadge();
   var today=todayStr(),own=isOwner(),ro=!S.canWrite||S.stale;
   box.innerHTML=(S.stale?'<p class="hint" style="margin:0">저장된 목록을 먼저 보여주고 있습니다. 최신 내용을 확인하는 중입니다…</p>':'')+S.cycles.map(function(c){
     var a=ageOf(c,today),sum=HOUSES.reduce(function(x,h){return x+headsOf(c,h);},0);
     var sm=(S.shipMap||{})[c.id],sd=(sm&&/^\d{4}-\d{2}-\d{2}$/.test(sm.date||'')&&sm.date>=c.stockDate)?sm.date:null;
-    var pill=sd?ageOf(c,sd)+'일령 출하':(a>=1?a+'일령':'입식 전');
+    var pill=sd?ageOf(c,sd)+'일령 출하':(a>=1?a+'일령':'D-'+(1-a)+' 입식 예정');
     var agetxt=sd?'출하일 '+dot(sd):(sm&&sm.ready?'출하 완료':'');
     var id=esc(c.id);
     return '<div class="cyc-card" aria-current="'+(c.id===S.cid)+'">'+
       '<div class="cyc-main"><b>'+dot(c.stockDate)+' 입식<span class="cyc-age">'+pill+'</span>'+'</b>'+
-      '<span>총 '+fmt(c.total)+'수 · 서비스 포함 '+fmt(sum)+'수'+(agetxt?' · '+agetxt:'')+'</span>'+(c.note?'<span style="white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font-size:14px;margin-top:2px">'+esc(c.note)+'</span>':'')+'</div>'+
+      '<span>'+(isPlanned(c)?'마릿수 미입력 · 입식일에 “수정”으로 입력':'총 '+fmt(c.total)+'수 · 서비스 포함 '+fmt(sum)+'수')+(agetxt?' · '+agetxt:'')+'</span>'+(c.note?'<span style="white-space:pre-wrap;overflow-wrap:anywhere;color:var(--ink);font-size:14px;margin-top:2px">'+esc(c.note)+'</span>':'')+'</div>'+
       '<div class="cyc-btns"><button type="button" class="btn primary" data-act="open" data-cid="'+id+'">'+EM('📂')+'열기</button>'+
       '<button type="button" class="btn" data-act="edit" data-cid="'+id+'"'+(ro?' disabled':'')+'>'+EM('✏️')+'수정</button>'+
       '<button type="button" class="btn" data-act="backup" data-cid="'+id+'">'+EM('💾')+'백업</button>'+
@@ -1752,7 +1795,7 @@ function fillList(){
         '<div class="cyc-btns"><button type="button" class="btn danger" data-act="deldo" data-cid="'+id+'">삭제합니다</button>'+
         '<button type="button" class="btn" data-act="delno">'+EM('✖️')+'취소</button></div></div>':'')+
       '</div>';
-  }).join('');
+  }).join('')+(badgeAsk()?'<button type="button" class="btn" data-act="badge-ask">'+EM('🔢')+'앱 아이콘에 남은 날 숫자 켜기</button>':'');
 }
 function openForm(v){
   var b=$('formBody');if(!b)return;b.hidden=!v;
@@ -1775,7 +1818,7 @@ function cancelEdit(){
   if(!$('homeForm'))return;
   $('formTitle').innerHTML=IC('duck')+'새 입식 등록';
   $('nSave').innerHTML=EM('➕')+'입식 등록';$('nCancel').hidden=true;
-  $('nHint').textContent='동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다.';
+  $('nHint').textContent='동별 마릿수는 축사 크기에 비례해 나누고, 각 동에 서비스 2%를 더합니다. 입식 전이면 날짜만 넣어 예정으로 등록하고, 마릿수·비고는 입식일에 “수정”으로 넣으세요.';
   S.termsReady=false;
   $('nDate').value=todayStr();nDateTxt();$('nTotal').value='';$('nNote').value='';$('nErr').hidden=true;updatePrev();clearTerms();S.prefilled=false;if(S.db&&S.ready){S.prefilled=true;prefillTerms();}
 }
@@ -1785,7 +1828,7 @@ function startEdit(cid){
   $('formTitle').innerHTML=IC('duck')+'입식 수정 · '+dot(c.stockDate);
   $('nSave').innerHTML=EM('💾')+'수정 저장';$('nCancel').hidden=false;
   $('nHint').textContent='총 마릿수를 바꾸면 동별 마릿수가 다시 계산됩니다. 이미 입력한 도태·폐사·사료·온도 기록은 그대로 유지됩니다.';
-  $('nDate').value=c.stockDate;nDateTxt();$('nTotal').value=String(c.total);$('nNote').value=c.note||'';$('nErr').hidden=true;updatePrev();
+  $('nDate').value=c.stockDate;nDateTxt();$('nTotal').value=Number(c.total)>0?String(c.total):'';$('nNote').value=c.note||'';$('nErr').hidden=true;updatePrev();
   S.termsReady=false;clearTerms();renderNMonths();
   if(isOwner())S.db.doc('settle/'+cid).get().then(function(sn){
     if(S.editId!==cid)return;
@@ -1797,13 +1840,13 @@ function saveCycle(){
   var err=$('nErr'),date=$('nDate').value,t=parseTotal(),btn=$('nSave'),note=($('nNote').value||'').trim();
   err.hidden=true;
   if(!date){err.textContent='입식일을 선택하세요.';err.hidden=false;return;}
-  if(!isFinite(t)||t<100){err.textContent='총 마릿수를 숫자로 입력하세요. 예: 25000';err.hidden=false;return;}
+  if(!isFinite(t)||(t!==0&&t<100)){err.textContent='총 마릿수를 숫자로 입력하세요. 예: 25000 (모르면 비워 두기)';err.hidden=false;return;}
   if(!S.db){err.textContent='저장소에 연결되지 않았습니다. 인터넷 연결을 확인하세요.';err.hidden=false;return;}
   var tr=readTerms();if(tr.bad){err.textContent='정산 단가는 0 이상의 숫자로 입력하세요.';err.hidden=false;return;}
   if(S.editId){
     var old=cycleById(S.editId);if(!old){cancelEdit();return;}
     var patch={stockDate:date,note:note};
-    if(t!==Number(old.total)){var al=allocate(t),hh={};al.forEach(function(n,i){hh[i+1]=n;});patch.total=t;patch.heads=hh;}
+    if(t!==(Number(old.total)||0)){var al=allocate(t),hh={};al.forEach(function(n,i){hh[i+1]=n;});patch.total=t;patch.heads=hh;}
     btn.disabled=true;
     var eid=S.editId,wt=S.termsReady;
     S.db.doc('cycles/'+eid).update(patch)
@@ -1835,6 +1878,8 @@ function saveCycle(){
       idxAdd(id);S.ready=true;
       $('nTotal').value='';$('nNote').value='';updatePrev();clearTerms();S.prefilled=false;S.date=date>todayStr()?date:todayStr();
       if(!cycleById(id)){S.cycles.unshift({id:id,stockDate:date,total:t,heads:heads,note:note});}
+      var dl0=dayNum(date)-dayNum(todayStr());
+      if(dl0>0){S.cycles.sort(function(a,b){return String(b.stockDate).localeCompare(String(a.stockDate));});updateBadge();fillList();toast('입식 예정 등록됨 · D-'+dl0);return;}
       S.tab='input';selectCycle(id);window.scrollTo(0,0);toast('입식 등록됨');
     })
     .catch(function(e){
@@ -2528,7 +2573,7 @@ function houseSeries(c,g){
 function cycLabel(c){
   var sm=(S.shipMap||{})[c.id],sd=(sm&&sm.date)||null;
   if(!sd||sd<c.stockDate){var si=shipOf(c.id);sd=(si&&si.date&&si.date>=c.stockDate)?si.date:null;}
-  var a=sd?ageOf(c,sd):ageOf(c,todayStr()),t=sd?a+'일령 출하':(a>=1?a+'일령':'입식 전');
+  var a=sd?ageOf(c,sd):ageOf(c,todayStr()),t=sd?a+'일령 출하':(a>=1?a+'일령':'D-'+(1-a));
   return c.stockDate.slice(2).replace(/-/g,'.')+' 입식 · '+t;
 }
 function shipFrom(doc){
@@ -3372,6 +3417,7 @@ function bind(){
       var act=a.dataset.act;
       var cid=a.dataset.cid;
       if(act==='new'){cancelEdit();goHome(true);return;}
+      if(act==='badge-ask'){try{Notification.requestPermission().then(function(){lastBadge=null;updateBadge();fillList();});}catch(e){}return;}
       if(act==='form-toggle'){var fbd=$('formBody');openForm(!!(fbd&&fbd.hidden));return;}
       if(act==='fd-ok'){feedSave(Number(a.dataset.h));return;}
       if(act==='fpen'){S.fpen=Number(a.dataset.p);fpenRender();feedRecalc();return;}
@@ -3388,7 +3434,7 @@ function bind(){
       if(act==='save'){saveCycle();return;}
       if(act==='cancel-edit'){cancelEdit();return;}
       if(act==='open'){S.date=todayStr();S.tab='input';selectCycle(cid);window.scrollTo(0,0);return;}
-      if(act==='edit'){startEdit(cid);return;}
+      if(act==='edit'){if(!$('homeForm')||S.tab!=='home'){S.tab='home';render();}startEdit(cid);return;}
       if(act==='backup'){backupCycle(cid);return;}
       if(act==='sf-view'){sfView(a.dataset.fid);return;}
       if(act==='sf-close'){sfClose();return;}
@@ -3718,7 +3764,7 @@ function wrap(o){
 }
 window.__usage={limit:LIM,day:dayKey,pend:function(){return pend;},flush:flush};
 setInterval(flush,120000);
-document.addEventListener('visibilitychange',function(){if(document.hidden)flush();});
+document.addEventListener('visibilitychange',function(){if(document.hidden)flush();else if(window.__wlBadge)window.__wlBadge();});
 window.addEventListener('pagehide',flush);
 
 window.claude={use:function(name){
