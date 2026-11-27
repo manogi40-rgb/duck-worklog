@@ -627,7 +627,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 window.__wlBadge=function(){lastBadge=null;updateBadge();if(S.tab==='home')fillList();renderHeader();};
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v36';
+var VER='v37';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -862,7 +862,16 @@ function render(){
   if(!S.ready||!c){
     pane.innerHTML=emptyHTML(!S.ready);S.inKey=null;S.avgKey=null;return;
   }
-  if(daysLeft(c)>0){pane.innerHTML=planHTML(c);S.inKey=null;S.avgKey=null;return;}
+  if(daysLeft(c)>0){
+    var pk='plan|'+c.id+'|'+daysLeft(c)+'|'+(Number(c.total)||0);
+    if(S.tab!=='input'||S.inKey!==pk||!document.querySelector('#pane-input [data-tdlist]')){
+      pane.innerHTML=planHTML(c)+(S.tab==='input'?todoShell():'');
+      S.inKey=S.tab==='input'?pk:null;
+    }
+    S.avgKey=null;
+    if(S.tab==='input'){renderTodos();renderTdHist();}
+    return;
+  }
   if(S.tab==='input')renderInput();else if(S.tab==='log')renderLog();else renderAvg();
   updateRO();
 }
