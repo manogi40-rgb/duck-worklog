@@ -627,7 +627,7 @@ function ageOf(c,d){return dayNum(d)-dayNum(c.stockDate)+1;}
 window.__wlBadge=function(){lastBadge=null;updateBadge();if(S.tab==='home')fillList();renderHeader();};
 var S={db:null,user:null,uid:null,canWrite:true,cycles:[],ready:false,cid:null,date:todayStr(),tab:'home',editId:null,delId:null,restore:null,dl:null,settings:null,imp:null,stale:false,cyclesDef:false,sync:{e:true,d:true},g:{ship:{},shipPending:{},mode:'house',metric:'temp',win:'all',cum:false,off:{},table:false,scope:'all',sel:[],color:{},cache:{},pending:{},selInit:false,mets:['drate','temp'],mark:'rot',preset:'base'},
   entries:new Map(),days:new Map(),filter:'all',unsubs:[],inKey:null,avgKey:null,status:'저장소 연결 중…',step:'start',dbg:{}};
-var VER='v35';
+var VER='v36';
 function dbgTxt(){var d=S.dbg,k,o=[VER];for(k in d)o.push(k+':'+d[k]);return o.join(' · ');}
 
 function cyc(){for(var i=0;i<S.cycles.length;i++){if(S.cycles[i].id===S.cid)return S.cycles[i];}return null;}
@@ -1694,17 +1694,18 @@ async function settleDocs(){
 }
 async function prefillTerms(){
   if(!S.db||S.editId||!isOwner()||!S.defsLoaded)return;
-  if(S.defs&&DEF_KEYS.some(function(x){return isNum(S.defs[x[1]]);})){fillFrom(S.defs);return;}
+  /* 바로 전 파트(입식일이 가장 늦은 파트) 정산 단가를 먼저 넣고, 빈 칸만 저장된 기본값으로 채운다 */
   try{
     var best=null;
     (await settleDocs()).forEach(function(d){
-      var x=d.data();if(!x||!x.terms)return;
+      var x=d.data();if(!x||!x.terms||!DEF_KEYS.some(function(k){return isNum(x.terms[k[1]]);}))return;
       var oc=cycleById(d.id),sd=oc?oc.stockDate:'';
       if(!best||sd>best.sd)best={sd:sd,t:x.terms};
     });
-    if(!best||S.editId)return;
-    fillFrom(best.t);
+    if(S.editId)return;
+    if(best)fillFrom(best.t);
   }catch(e){}
+  if(!S.editId&&S.defs)fillFrom(S.defs);
 }
 async function saveTermsFor(cid,terms){
   var sn=await S.db.doc('settle/'+cid).get();
